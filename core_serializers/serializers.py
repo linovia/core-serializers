@@ -55,38 +55,23 @@ class Serializer(fields.Field):
 
     def __init__(self, partial=False, **kwargs):
         super(Serializer, self).__init__(**kwargs)
+        self.partial = partial
 
         # Every new serializer is created with a clone of the field instances.
         # This allows users to dynamically modify the fields on a serializer
         # instance without affecting every other serializer class.
         self.fields = copy.deepcopy(self._fields)
 
-        # If a field does not have `source=...` set then it should
-        # simply use the field name.
+        # Setup all the child fields, to provide them with the current context.
         for field_name, field in self.fields.items():
-            if field.source is None:
-                field.source = field_name
+            field.setup(field_name, self)
 
-        self.context['serializer'] = self
-        self._set_context(self.context)
-        if partial:
-            self._set_partial()
-
-    def _set_context(self, context):
-        """
-        Sets the context dictionary on the serializer and all its fields.
-        """
-        self.context = context
-        for field in self.fields.values():
-            field._set_context(context)
-
-    def _set_partial(self):
-        """
-        Set `required` to `False` on the serializer and all its fields.
-        """
-        self.required = False
-        for field in self.fields.values():
-            field._set_partial()
+    def setup(self, field_name, serializer):
+        # If the serializer is used as a field then it needs to provide
+        # the current context to all it's child fields.
+        super(Serializer, self).setup(field_name, serializer)
+        for field_name, field in self.fields.items():
+            field.setup(field_name, serializer)
 
     def validate(self, data):
         """

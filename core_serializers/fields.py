@@ -38,7 +38,7 @@ class Field(object):
     _creation_counter = 0
 
     def __init__(self, read_only=False, write_only=False,
-            required=None, default=None, source=None, context=None):
+            required=None, default=None, source=None):
 
         # The creation counter is required so that the serializer metaclass
         # can determine the ordering of the fields on the class.
@@ -60,31 +60,36 @@ class Field(object):
         self.required = required
         self.default = default
         self.source = source
-        self.context = {} if context is None else context
-        # label, help_text, validators, widget
+        self.serializer = None
 
-    def setup(self, field_name, serializer, partial):
+    def setup(self, field_name, serializer):
+        """
+        Setup the context for the field instance.
+        """
+        self.field_name = field_name
         self.serializer = serializer
         if self.source is None:
             self.source = field_name
-        if partial:
+        if serializer.partial:
             self.required = False
 
-    def _set_context(self, context):
-        self.context = context
-
-    def _set_partial(self):
-        self.required = False
-
-    def _get_default(self):
+    def get_default(self):
         if self.required:
             raise ValueError('required')
         return self.default
 
     def set_item(self, dictionary, value):
+        """
+        Given a dictionary, set the key that this field should populate
+        after validation.
+        """
         set_item(dictionary, key=self.source, value=value)
 
     def get_attribute(self, instance):
+        """
+        Given an object instance, return the attribute value that this
+        field should serialize.
+        """
         return get_attribute(instance, key=self.source)
 
     def validate(self, data):
@@ -97,7 +102,7 @@ class Field(object):
         if self.read_only:
             return empty
         if data is empty:
-            return self._get_default()
+            return self.get_default()
         return data
 
     def serialize(self, value):
@@ -135,3 +140,15 @@ class IntegerField(Field):
         except (ValueError, TypeError):
             raise ValueError('invalid integer')
         return data
+
+
+class SerializerMethodField(Field):
+    def __init__(self, **kwargs):
+        kwargs['source'] = '*'
+        kwargs['read_only'] = True
+        super(SerializerMethodField, self).__init__(**kwargs)
+
+    def serialize(self, value):
+        attr = 'get_%s' % self.field_name
+        method = getattr(self.serializer, attr)
+        return method(value)

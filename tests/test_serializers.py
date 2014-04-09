@@ -148,7 +148,7 @@ def test_nested_update():
     assert obj.nested == data['nested']
 
 
-class StarredSourceTests:
+class TestStarredSource:
     data = {
         'nested1': {
             'a': random.randint(1, 10),
@@ -160,7 +160,7 @@ class StarredSourceTests:
         }
     }
 
-    def get_serializer():
+    def get_serializer(self):
         class NestedSerializer1(serializers.Serializer):
             a = fields.Field()
             b = fields.Field()
@@ -173,16 +173,18 @@ class StarredSourceTests:
             nested1 = NestedSerializer1(source='*')
             nested2 = NestedSerializer2(source='*')
 
-    def test_nested_validate():
+        return TestSerializer()
+
+    def test_nested_validate(self):
         serializer = self.get_serializer()
         assert serializer.validate(self.data) == {
-            'a': data['nested1']['a'],
-            'b': data['nested1']['b'],
-            'c': data['nested2']['c'],
-            'd': data['nested2']['d']
+            'a': self.data['nested1']['a'],
+            'b': self.data['nested1']['b'],
+            'c': self.data['nested2']['c'],
+            'd': self.data['nested2']['d']
         }
 
-    def test_nested_create():
+    def test_nested_create(self):
         serializer = self.get_serializer()
         obj = serializer.create(self.data)
         assert obj.a == self.data['nested1']['a']
@@ -190,16 +192,34 @@ class StarredSourceTests:
         assert obj.c == self.data['nested2']['c']
         assert obj.d == self.data['nested2']['d']
 
-    def test_nested_serialize():
+    def test_nested_serialize(self):
         serializer = self.get_serializer()
         obj = serializers.DeserializedObject(
-            nested1=serializers.DeserializedObject(
-                a=self.data['nested1'][a],
-                b=self.data['nested1'][b]
-            ),
-            nested2=serializers.DeserializedObject(
-                c=self.data['nested2'][c],
-                d=self.data['nested2'][d]
-            )
+            a=self.data['nested1']['a'],
+            b=self.data['nested1']['b'],
+            c=self.data['nested2']['c'],
+            d=self.data['nested2']['d']
         )
         assert serializer.serialize(obj) == self.data
+
+
+class TestSerializerMethodField:
+    def get_serializer(self):
+        class TestSerializer(serializers.Serializer):
+            username = fields.Field()
+            class_name = fields.SerializerMethodField()
+
+            def get_class_name(self, instance):
+                return instance.__class__.__name__
+
+        return TestSerializer()
+
+    def test_method_field(self):
+        serializer = self.get_serializer()
+        obj = serializers.DeserializedObject(
+            username = 'abcdefghijklmnopqrstuvwzyz'
+        )
+        assert serializer.serialize(obj) == {
+            'username': 'abcdefghijklmnopqrstuvwzyz',
+            'class_name': 'DeserializedObject'
+        }
