@@ -11,6 +11,14 @@ def test_validate():
     field = fields.Field()
     assert field.validate(num) == num
 
+def test_validate_no_data():
+    """
+    By default a field should simply return the data it validates.
+    """
+    num = random.randint(1, 10)
+    field = fields.Field(required=False)
+    assert field.validate(empty) == empty
+
 def test_read_only_field():
     """
     A read-only field should always return empty data when validating.

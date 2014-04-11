@@ -16,9 +16,13 @@ class DeserializedObject(object):
         for key, value in kwargs.items():
             setattr(self, key, value) 
 
-    def __str__(self):
+    def __repr__(self):
         attributes = str(self.__dict__).lstrip('{').rstrip('}')
         return '<Deserialized object %s>' % attributes
+
+
+class BaseSerializer():
+    pass
 
 
 class SerializerMetaclass(type):
@@ -64,26 +68,31 @@ class Serializer(fields.Field):
 
         # Setup all the child fields, to provide them with the current context.
         for field_name, field in self.fields.items():
-            field.setup(field_name, self)
+            field.setup(field_name, self, self)
 
-    def setup(self, field_name, serializer):
+    def setup(self, field_name, parent, root):
         # If the serializer is used as a field then it needs to provide
         # the current context to all it's child fields.
-        super(Serializer, self).setup(field_name, serializer)
+        super(Serializer, self).setup(field_name, parent, root)
         for field_name, field in self.fields.items():
-            field.setup(field_name, serializer)
+            field.setup(field_name, self, root)
 
     def validate(self, data):
         """
         Validate the given data and return a dictionary of validated values.
         """
+        data = super(Serializer, self).validate(data)
+        if data is empty:
+            return data
+
         ret = {}
+
         for field_name, field in self.fields.items():
             input_value = data.get(field_name, empty)
             native_value = field.validate(input_value)
             if native_value is empty:
                 continue
-            field.set_item(ret, native_value)
+            field.set_value(ret, native_value)
 
         return ret
 
@@ -107,11 +116,44 @@ class Serializer(fields.Field):
         Given an object instance, return it as serialized data.
         """
         ret = {}
+
         for field_name, field in self.fields.items():
-            native_value = field.get_attribute(instance)
+            native_value = field.get_value(instance)
             output_value = field.serialize(native_value)
             if output_value is empty:
                 continue
             ret[field_name] = output_value
 
         return ret
+
+
+# class ListSerializer(fields.Field):
+#     def __init__(self, child_serializer, partial=False, **kwargs):
+#         super(ListSerializer, self).__init__(**kwargs)
+#         self.child_serializer = child_serializer
+#         self.partial = partial
+#         child_serializer.setup(None, self, self)
+
+#     def setup(self, field_name, parent, root):
+#         # If the list is used as a field then it needs to provide
+#         # the current context to the child serializer.
+#         super(Serializer, self).setup(field_name, parent, root)
+#         self.child_serializer.setup(field_name, self, root)
+
+#     def validate(self, data):
+#         data = super(ListSerializer, self).validate(data)
+#         ret = []
+
+#         for item in data:
+#             native_value = self.child_serializer.validate(item)
+#             if native_value is empty:
+#                 continue
+#             ret.append(native_value)
+
+#         return ret
+
+#     def create(self, data):
+#         pass
+
+#     def update(self, instance, data):
+#         pass

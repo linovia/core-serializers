@@ -148,6 +148,41 @@ def test_nested_update():
     assert obj.nested == data['nested']
 
 
+def test_nested_serializer_not_required():
+    class NestedSerializer(serializers.Serializer):
+        b = fields.Field()
+        c = fields.Field()
+
+    class TestSerializer(serializers.Serializer):
+        nested = NestedSerializer(required=False)
+        a = fields.Field()
+
+    data = {
+        'a': random.randint(1, 10),
+    }
+
+    serializer = TestSerializer()
+    assert data == serializer.validate(data)
+
+
+# def test_nested_serializer_not_required_with_none():
+#     class NestedSerializer(serializers.Serializer):
+#         b = fields.Field()
+#         c = fields.Field()
+
+#     class TestSerializer(serializers.Serializer):
+#         nested = NestedSerializer(required=False)
+#         a = fields.Field()
+
+#     data = {
+#         'a': random.randint(1, 10),
+#         'nested': None
+#     }
+
+#     serializer = TestSerializer()
+#     assert data == serializer.validate(data)
+
+
 class TestStarredSource:
     data = {
         'nested1': {

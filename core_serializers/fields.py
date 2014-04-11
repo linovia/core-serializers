@@ -1,96 +1,131 @@
 class empty:
+    """
+    This class is used to represent no data being provided for a given input
+    or output value.
+
+    It is required because `None` may be a valid input or output value.
+    """
     pass
 
 
-def get_attribute(instance, key):
+class IgnoreField(Exception):
+    pass
+
+
+class BaseField(object):
     """
-    Similar to 'getattr', but additionally allows:
+    This class is provided as the miminal field interface.
 
-    'nested.lookup' - getattr(getattr(obj, 'nested'), 'lookup')
-    '*'             - return object without lookup
+    It does not include any of the configuration options made available
+    by the `Field` class, but may be overridden to provide for custom
+    field behavior.
     """
-    if key == '*':
-        return instance
-    elif '.' in key:
-        left, right = key.split('.', 1)
-        return get_attribute(getattr(instance, left), right)
-    return getattr(instance, key)
-
-
-def set_item(dictionary, key, value):
-    """
-    Similar to `__setitem__`, but additionally allows:
-
-    'nested.lookup' - dictionary['nested']['lookup'] = value
-    '*'             - dictionary.update(value)
-    """
-    if key == '*':
-        dictionary.update(value)
-    elif '.' in key:
-        left, right = key.split('.', 1)
-        dictionary = dictionary.get(left, {})
-        set_item(dictionary[left], right, value)
-    else:
-        dictionary[key] = value
-
-
-class Field(object):
     _creation_counter = 0
 
-    def __init__(self, read_only=False, write_only=False,
-            required=None, default=None, source=None):
-
+    def __init__(self):
         # The creation counter is required so that the serializer metaclass
         # can determine the ordering of the fields on the class.
         self._creation_counter = Field._creation_counter
-        Field._creation_counter += 1
+        BaseField._creation_counter += 1
+
+    def setup(self, field_name, parent, root):
+        self.field_name = field_name
+        self.parent = parent
+        self.root = root
+
+    def set_value(self, dictionary, value):
+        dictionary[self.field_name] = value
+
+    def get_value(self, instance):
+        return getattr(instance, self.field_name)
+
+    def validate(self, data):
+        return data
+
+    def serialize(self, value):
+        return value
+
+
+class Field(BaseField):
+    def __init__(self, read_only=False, write_only=False,
+                 required=None, default=empty, source=None):
+        super(Field, self).__init__()
 
         # If `required` is unset, then use `True` unless a default is provided.
         if required is None:
-            required = default is None and not read_only
+            required = default is empty and not read_only
 
         # Some combinations of keyword arguments do not make sense.
         assert not (read_only and write_only), 'May not set both `read_only` and `write_only`'
         assert not (read_only and required), 'May not set both `read_only` and `required`'
-        assert not (read_only and default), 'May not set both `read_only` and `default`'
-        assert not (required and default), 'May not set both `required` and `default`'
+        assert not (read_only and default is not empty), 'May not set both `read_only` and `default`'
+        assert not (required and default is not empty), 'May not set both `required` and `default`'
 
         self.read_only = read_only
         self.write_only = write_only
         self.required = required
         self.default = default
         self.source = source
-        self.serializer = None
 
-    def setup(self, field_name, serializer):
+    def setup(self, field_name, parent, root):
         """
         Setup the context for the field instance.
         """
         self.field_name = field_name
-        self.serializer = serializer
+        self.parent = parent
+        self.root = root
         if self.source is None:
             self.source = field_name
-        if serializer.partial:
+        if root.partial:
             self.required = False
 
-    def get_default(self):
-        if self.required:
-            raise ValueError('required')
-        return self.default
-
-    def set_item(self, dictionary, value):
+    def set_value(self, dictionary, value):
         """
         Given a dictionary, set the key that this field should populate
         after validation.
         """
-        set_item(dictionary, key=self.source, value=value)
+        if self.source == '*':
+            # Deal with special case '*' and update whole dictionary,
+            # not just a single key in the dictionary.
+            dictionary.update(value)
+            return
 
-    def get_attribute(self, instance):
+        # Deal with regular or nested lookups.
+        key = self.source
+        while '.' in key:
+            next, key = key.split('.', 1)
+            dictionary = dictionary.get(next, {})
+
+        dictionary[key] = value
+
+    def get_value(self, instance):
         """
         Given an object instance, return the attribute value that this
         field should serialize.
         """
-        return get_attribute(instance, key=self.source)
+        if self.source == '*':
+            # Deal with special case '*' and return the whole instance,
+            # not just an attribute on the instance.
+            return instance
+
+        # Deal with regular or nested lookups.
+        key = self.source
+        while '.' in key:
+            next, key = key.split('.', 1)
+            instance = getattr(instance, next)
+
+        return getattr(instance, key)
+
+    def get_default(self):
+        """
+        Return the default value to use when validating data if no input
+        is provided for this field.
+
+        If a default has not been set for this field then this will simply
+        return `empty`, indicating that no value should be set in the
+        validated data for this field.
+        """
+        return self.default
 
     def validate(self, data):
         """
@@ -101,7 +136,9 @@ class Field(object):
         """
         if self.read_only:
             return empty
-        if data is empty:
+        elif data is empty and self.required:
+            raise ValueError('required')
+        elif data is empty:
             return self.get_default()
         return data
 
@@ -115,6 +152,8 @@ class Field(object):
             return empty
         return value
 
+
+### Typed field classes
 
 class BooleanField(Field):
     def validate(self, data):
@@ -142,6 +181,8 @@ class IntegerField(Field):
         return data
 
 
+### Complex field classes
+
 class SerializerMethodField(Field):
     def __init__(self, **kwargs):
         kwargs['source'] = '*'
@@ -150,5 +191,5 @@ class SerializerMethodField(Field):
 
     def serialize(self, value):
         attr = 'get_%s' % self.field_name
-        method = getattr(self.serializer, attr)
+        method = getattr(self.parent, attr)
         return method(value)
