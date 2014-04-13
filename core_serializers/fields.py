@@ -140,7 +140,7 @@ class Field(BaseField):
             raise ValueError('required')
         elif data is empty:
             return self.get_default()
-        return data
+        return self.to_native(data)
 
     def serialize(self, value):
         """
@@ -150,14 +150,24 @@ class Field(BaseField):
         """
         if self.write_only:
             return empty
-        return value
+        return self.to_primitive(value)
 
+    def to_native(self, data):
+        """
+        native value <- primitive datatype.
+        """
+        return data
+
+    def to_primitive(self, value):
+        """
+        native value -> primitive datatype.
+        """
+        return value
 
 ### Typed field classes
 
 class BooleanField(Field):
-    def validate(self, data):
-        data = super(BooleanField, self).validate(data)
+    def to_native(self, data):
         if data in ('true', 't', 'True', '1'):
             return True
         if data in ('false', 'f', 'False', '0'):
@@ -166,14 +176,12 @@ class BooleanField(Field):
 
 
 class CharField(Field):
-    def validate(self, data):
-        data = super(CharField, self).validate(data)
+    def to_native(self, data):
         return str(data)
 
 
 class IntegerField(Field):
-    def validate(self, data):
-        data = super(IntegerField, self).validate(data)
+    def to_native(self, data):
         try:
             data = int(str(data))
         except (ValueError, TypeError):

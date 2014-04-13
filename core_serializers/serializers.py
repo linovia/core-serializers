@@ -77,14 +77,10 @@ class Serializer(fields.Field):
         for field_name, field in self.fields.items():
             field.setup(field_name, self, root)
 
-    def validate(self, data):
+    def to_native(self, data):
         """
-        Validate the given data and return a dictionary of validated values.
+        dict of native values <- dict of primitive datatypes.
         """
-        data = super(Serializer, self).validate(data)
-        if data is empty:
-            return data
-
         ret = {}
 
         for field_name, field in self.fields.items():
@@ -93,6 +89,21 @@ class Serializer(fields.Field):
             if native_value is empty:
                 continue
             field.set_value(ret, native_value)
+
+        return ret
+
+    def to_primitive(self, instance):
+        """
+        object instance -> dict of primitive datatypes.
+        """
+        ret = {}
+
+        for field_name, field in self.fields.items():
+            native_value = field.get_value(instance)
+            output_value = field.serialize(native_value)
+            if output_value is empty:
+                continue
+            ret[field_name] = output_value
 
         return ret
 
@@ -111,20 +122,7 @@ class Serializer(fields.Field):
         for key, value in data.items():
             setattr(instance, key, value)
 
-    def serialize(self, instance):
-        """
-        Given an object instance, return it as serialized data.
-        """
-        ret = {}
 
-        for field_name, field in self.fields.items():
-            native_value = field.get_value(instance)
-            output_value = field.serialize(native_value)
-            if output_value is empty:
-                continue
-            ret[field_name] = output_value
-
-        return ret
 
 
 # class ListSerializer(fields.Field):
