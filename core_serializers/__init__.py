@@ -8,5 +8,5 @@ from core_serializers.fields import (
     BooleanField,
     CharField,
     IntegerField,
-    SerializerMethodField
+    MethodField
 )

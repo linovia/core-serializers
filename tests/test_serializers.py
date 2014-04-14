@@ -238,11 +238,11 @@ class TestStarredSource:
         assert serializer.serialize(obj) == self.data
 
 
-class TestSerializerMethodField:
+class TestMethodField:
     def get_serializer(self):
         class TestSerializer(serializers.Serializer):
             username = fields.Field()
-            class_name = fields.SerializerMethodField()
+            class_name = fields.MethodField()
 
             def get_class_name(self, instance):
                 return instance.__class__.__name__

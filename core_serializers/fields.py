@@ -8,10 +8,6 @@ class empty:
     pass
 
 
-class IgnoreField(Exception):
-    pass
-
-
 class BaseField(object):
     """
     This class is provided as the miminal field interface.
@@ -191,11 +187,11 @@ class IntegerField(Field):
 
 ### Complex field classes
 
-class SerializerMethodField(Field):
+class MethodField(Field):
     def __init__(self, **kwargs):
         kwargs['source'] = '*'
         kwargs['read_only'] = True
-        super(SerializerMethodField, self).__init__(**kwargs)
+        super(MethodField, self).__init__(**kwargs)
 
     def serialize(self, value):
         attr = 'get_%s' % self.field_name
