@@ -1,3 +1,6 @@
+from core_serializers.common import FieldDict
+
+
 class empty:
     """
     This class is used to represent no data being provided for a given input
@@ -29,11 +32,17 @@ class BaseField(object):
         self.parent = parent
         self.root = root
 
-    def set_value(self, dictionary, value):
+    def get_primitive_value(self, dictionary):
+        return dictionary.get(self.field_name)
+
+    def set_native_value(self, dictionary, value):
         dictionary[self.field_name] = value
 
-    def get_value(self, instance):
+    def get_native_value(self, instance):
         return getattr(instance, self.field_name)
+
+    def set_primitive_value(self, dictionary, value):
+        dictionary[self.field_name] = value
 
     def validate(self, data):
         return data
@@ -44,7 +53,7 @@ class BaseField(object):
 
 class Field(BaseField):
     def __init__(self, read_only=False, write_only=False,
-                 required=None, default=empty, source=None):
+                 required=None, default=empty, initial=None, source=None):
         super(Field, self).__init__()
 
         # If `required` is unset, then use `True` unless a default is provided.
@@ -62,6 +71,7 @@ class Field(BaseField):
         self.required = required
         self.default = default
         self.source = source
+        self.initial = initial
 
     def setup(self, field_name, parent, root):
         """
@@ -75,11 +85,17 @@ class Field(BaseField):
         if root.partial:
             self.required = False
 
-    def set_value(self, dictionary, value):
+    def get_primitive_value(self, dictionary):
+        return dictionary.get(self.field_name, empty)
+
+    def set_native_value(self, dictionary, value):
         """
         Given a dictionary, set the key that this field should populate
         after validation.
         """
+        if value is empty:
+            return
+
         if self.source == '*':
             # Deal with special case '*' and update whole dictionary,
             # not just a single key in the dictionary.
@@ -94,11 +110,14 @@ class Field(BaseField):
 
         dictionary[key] = value
 
-    def get_value(self, instance):
+    def get_native_value(self, instance):
         """
         Given an object instance, return the attribute value that this
         field should serialize.
         """
+        if instance is empty:
+            return self.get_initial()
+
         if self.source == '*':
             # Deal with special case '*' and return the whole instance,
             # not just an attribute on the instance.
@@ -112,6 +131,14 @@ class Field(BaseField):
 
         return getattr(instance, key)
 
+    def set_primitive_value(self, dictionary, value):
+        if value is empty:
+            return
+        if isinstance(dictionary, FieldDict):
+            dictionary.set_item(self.field_name, value, field=self)
+        else:
+            dictionary[self.field_name] = value
+
     def get_default(self):
         """
         Return the default value to use when validating data if no input
@@ -123,12 +150,16 @@ class Field(BaseField):
         """
         return self.default
 
-    def validate(self, data):
+    def get_initial(self):
+        return self.initial
+
+    def validate(self, data=empty):
         """
         Validate a simple representation and return the internal value.
 
         The provided data may be `empty` if no representation was included.
-        May return `empty` if the field should not be included in the validated data.
+        May return `empty` if the field should not be included in the
+        validated data.
         """
         if self.read_only:
             return empty
@@ -138,7 +169,7 @@ class Field(BaseField):
             return self.get_default()
         return self.to_native(data)
 
-    def serialize(self, value):
+    def serialize(self, value=empty):
         """
         Serialize an internal value and return the simple representation.
 
@@ -160,7 +191,9 @@ class Field(BaseField):
         """
         return value
 
+
 ### Typed field classes
+
 
 class BooleanField(Field):
     def to_native(self, data):

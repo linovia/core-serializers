@@ -1,28 +1,8 @@
 from collections import OrderedDict
-from core_serializers import fields
-from core_serializers.fields import *
+from core_serializers.common import BasicObject, FieldDict
+from core_serializers.fields import Field, empty
+from core_serializers.formutils import MultiDict, parse_html_dict, parse_html_list
 import copy
-
-
-class DeserializedObject(object):
-    """
-    A basic object that simply sets whatever attributes are
-    passed to it at initialization.
-
-    The default Serializer class uses this on `create()`.
-    """
-
-    def __init__(self, **kwargs):
-        for key, value in kwargs.items():
-            setattr(self, key, value) 
-
-    def __repr__(self):
-        attributes = str(self.__dict__).lstrip('{').rstrip('}')
-        return '<Deserialized object %s>' % attributes
-
-
-class BaseSerializer():
-    pass
 
 
 class SerializerMetaclass(type):
@@ -54,8 +34,9 @@ class SerializerMetaclass(type):
         return super(SerializerMetaclass, cls).__new__(cls, name, bases, attrs)
 
 
-class Serializer(fields.Field):
+class Serializer(Field):
     __metaclass__ = SerializerMetaclass
+    dict_class = FieldDict
 
     def __init__(self, partial=False, **kwargs):
         super(Serializer, self).__init__(**kwargs)
@@ -77,33 +58,34 @@ class Serializer(fields.Field):
         for field_name, field in self.fields.items():
             field.setup(field_name, self, root)
 
+    def get_primitive_value(self, dictionary):
+        if isinstance(dictionary, MultiDict):
+            return parse_html_dict(dictionary, prefix=self.field_name)
+        return dictionary.get(self.field_name, empty)
+
     def to_native(self, data):
         """
-        dict of native values <- dict of primitive datatypes.
+        Dict of native values <- Dict of primitive datatypes.
         """
         ret = {}
 
-        for field_name, field in self.fields.items():
-            input_value = data.get(field_name, empty)
-            native_value = field.validate(input_value)
-            if native_value is empty:
-                continue
-            field.set_value(ret, native_value)
+        for field in self.fields.values():
+            primitive_value = field.get_primitive_value(data)
+            native_value = field.validate(primitive_value)
+            field.set_native_value(ret, native_value)
 
         return ret
 
     def to_primitive(self, instance):
         """
-        object instance -> dict of primitive datatypes.
+        Object instance -> Dict of primitive datatypes.
         """
-        ret = {}
+        ret = self.dict_class()
 
-        for field_name, field in self.fields.items():
-            native_value = field.get_value(instance)
-            output_value = field.serialize(native_value)
-            if output_value is empty:
-                continue
-            ret[field_name] = output_value
+        for field in self.fields.values():
+            native_value = field.get_native_value(instance)
+            primitive_value = field.serialize(native_value)
+            field.set_primitive_value(ret, primitive_value)
 
         return ret
 
@@ -112,7 +94,7 @@ class Serializer(fields.Field):
         Validate the given data and return an object instance.
         """
         data = self.validate(data)
-        return DeserializedObject(**data)
+        return BasicObject(**data)
 
     def update(self, instance, data):
         """
@@ -125,33 +107,61 @@ class Serializer(fields.Field):
 
 
 
-# class ListSerializer(fields.Field):
-#     def __init__(self, child_serializer, partial=False, **kwargs):
-#         super(ListSerializer, self).__init__(**kwargs)
-#         self.child_serializer = child_serializer
-#         self.partial = partial
-#         child_serializer.setup(None, self, self)
+class ListSerializer(Field):
+    def __init__(self, child_serializer, partial=False, **kwargs):
+        super(ListSerializer, self).__init__(**kwargs)
+        self.child_serializer = child_serializer
+        self.partial = partial
+        child_serializer.setup(None, self, self)
 
-#     def setup(self, field_name, parent, root):
-#         # If the list is used as a field then it needs to provide
-#         # the current context to the child serializer.
-#         super(Serializer, self).setup(field_name, parent, root)
-#         self.child_serializer.setup(field_name, self, root)
+    def setup(self, field_name, parent, root):
+        # If the list is used as a field then it needs to provide
+        # the current context to the child serializer.
+        super(ListSerializer, self).setup(field_name, parent, root)
+        self.child_serializer.setup(field_name, self, root)
 
-#     def validate(self, data):
-#         data = super(ListSerializer, self).validate(data)
-#         ret = []
+    def get_primitive_value(self, dictionary):
+        if isinstance(dictionary, MultiDict):
+            return parse_html_list(dictionary, prefix=self.field_name)
+        return dictionary.get(self.field_name, empty)
 
-#         for item in data:
-#             native_value = self.child_serializer.validate(item)
-#             if native_value is empty:
-#                 continue
-#             ret.append(native_value)
+    def to_native(self, data):
+        """
+        List of dicts of native values <- List of dicts of primitive datatypes.
+        """
+        if isinstance(data, MultiDict):
+            data = parse_html_list(data)
 
-#         return ret
+        # TODO: Skip empty returned results?
+        ret = []
 
-#     def create(self, data):
-#         pass
+        for item in data:
+            native_value = self.child_serializer.validate(item)
+            ret.append(native_value)
+
+        return ret
+
+    def to_primitive(self, data):
+        """
+        List of object instances -> List of dicts of primitive datatypes.
+        """
+        # TODO: Skip empty returned results?
+        ret = []
+
+        for item in data:
+            primitive_value = self.child_serializer.serialize(item)
+            ret.append(primitive_value)
+
+        return ret
+
+    def create(self, data):
+        ret = []
+
+        for item in data:
+            native_value = self.child_serializer.create(item)
+            ret.append(native_value)
+
+        return ret
 
 #     def update(self, instance, data):
-#         pass
+#         TODO

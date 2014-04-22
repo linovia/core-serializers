@@ -38,7 +38,7 @@ def test_update():
         b = fields.Field()
 
     serializer = TestSerializer()
-    obj = serializers.DeserializedObject(
+    obj = serializers.BasicObject(
         a=random.randint(1, 10),
         b=random.randint(1, 10)
     )
@@ -70,82 +70,6 @@ def test_value_serializer():
     assert validated['a'] == data['a']
     assert validated['b'] == int(data['b'])
     assert validated['c'] == (True if data['c'] == 'true' else False)
-
-
-def test_nested_validate():
-    class NestedSerializer(serializers.Serializer):
-        b = fields.Field()
-        c = fields.Field()
-
-    class TestSerializer(serializers.Serializer):
-        nested = NestedSerializer()
-        a = fields.Field()
-
-    data = {
-        'a': random.randint(1, 10),
-        'nested': {
-            'b': random.randint(1, 10),
-            'c': random.randint(1, 10),
-        }
-    }
-
-    serializer = TestSerializer()
-    assert data == serializer.validate(data)
-
-
-def test_nested_create():
-    class NestedSerializer(serializers.Serializer):
-        b = fields.Field()
-        c = fields.Field()
-
-    class TestSerializer(serializers.Serializer):
-        nested = NestedSerializer()
-        a = fields.Field()
-
-    data = {
-        'a': random.randint(1, 10),
-        'nested': {
-            'b': random.randint(1, 10),
-            'c': random.randint(1, 10),
-        }
-    }
-
-    serializer = TestSerializer()
-    obj = serializer.create(data)
-
-    assert obj.a == data['a']
-    assert obj.nested == data['nested']
-
-
-def test_nested_update():
-    class NestedSerializer(serializers.Serializer):
-        b = fields.Field()
-        c = fields.Field()
-
-    class TestSerializer(serializers.Serializer):
-        nested = NestedSerializer()
-        a = fields.Field()
-
-    obj = serializers.DeserializedObject(
-        a=random.randint(1, 10),
-        nested={
-            'b': random.randint(1, 10),
-            'c': random.randint(1, 10)
-        }
-    )
-    data = {
-        'a': random.randint(1, 10),
-        'nested': {
-            'b': random.randint(1, 10),
-            'c': random.randint(1, 10),
-        }
-    }
-
-    serializer = TestSerializer()
-    serializer.update(obj, data)
-
-    assert obj.a == data['a']
-    assert obj.nested == data['nested']
 
 
 def test_nested_serializer_not_required():
@@ -229,7 +153,7 @@ class TestStarredSource:
 
     def test_nested_serialize(self):
         serializer = self.get_serializer()
-        obj = serializers.DeserializedObject(
+        obj = serializers.BasicObject(
             a=self.data['nested1']['a'],
             b=self.data['nested1']['b'],
             c=self.data['nested2']['c'],
@@ -251,10 +175,10 @@ class TestMethodField:
 
     def test_method_field(self):
         serializer = self.get_serializer()
-        obj = serializers.DeserializedObject(
+        obj = serializers.BasicObject(
             username = 'abcdefghijklmnopqrstuvwzyz'
         )
         assert serializer.serialize(obj) == {
             'username': 'abcdefghijklmnopqrstuvwzyz',
-            'class_name': 'DeserializedObject'
+            'class_name': 'BasicObject'
         }
