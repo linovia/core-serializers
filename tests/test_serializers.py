@@ -3,53 +3,29 @@ from core_serializers import serializers
 import random
 
 
-def test_validate():
-    class TestSerializer(serializers.Serializer):
-        a = fields.Field()
-        b = fields.Field()
+class TestSerializer:
+    def setup(self):
+        class TestSerializer(serializers.Serializer):
+            a = fields.Field()
+            b = fields.Field()
+        self.serializer = TestSerializer()
 
-    serializer = TestSerializer()
-    data = {
-        'a': random.randint(1, 10),
-        'b': random.randint(1, 10)
-    }
+    def test_validate(self):
+        data = {'a': 1, 'b': 2}
+        assert data == self.serializer.validate(data)
 
-    assert data == serializer.validate(data)
+    def test_create(self):
+        data = {'a': 1, 'b': 2}
+        obj = self.serializer.create(data)
+        assert obj.a == 1
+        assert obj.b == 2
 
-def test_create():
-    class TestSerializer(serializers.Serializer):
-        a = fields.Field()
-        b = fields.Field()
-
-    serializer = TestSerializer()
-    data = {
-        'a': random.randint(1, 10),
-        'b': random.randint(1, 10)
-    }
-
-    obj = serializer.create(data)
-    assert obj.a == data['a']
-    assert obj.b == data['b']
-
-
-def test_update():
-    class TestSerializer(serializers.Serializer):
-        a = fields.Field()
-        b = fields.Field()
-
-    serializer = TestSerializer()
-    obj = serializers.BasicObject(
-        a=random.randint(1, 10),
-        b=random.randint(1, 10)
-    )
-    data = {
-        'a': random.randint(1, 10),
-        'b': random.randint(1, 10)
-    }
-
-    serializer.update(obj, data)
-    assert obj.a == data['a']
-    assert obj.b == data['b']
+    def test_update(self):
+        obj = serializers.BasicObject(a=1, b=2)
+        data = {'a': 3, 'b': 4}
+        self.serializer.update(obj, data)
+        assert obj.a == 3
+        assert obj.b == 4
 
 
 def test_value_serializer():
@@ -66,7 +42,6 @@ def test_value_serializer():
     }
 
     validated = serializer.validate(data)
-    print validated, data
     assert validated['a'] == data['a']
     assert validated['b'] == int(data['b'])
     assert validated['c'] == (True if data['c'] == 'true' else False)
