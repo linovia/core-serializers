@@ -59,6 +59,8 @@ class Serializer(Field):
             field.setup(field_name, self, root)
 
     def get_primitive_value(self, dictionary):
+        # We override the default field access in order to support
+        # nested HTML forms.
         if isinstance(dictionary, MultiDict):
             return parse_html_dict(dictionary, prefix=self.field_name)
         return dictionary.get(self.field_name, empty)
@@ -121,6 +123,8 @@ class ListSerializer(Field):
         self.child_serializer.setup(field_name, self, root)
 
     def get_primitive_value(self, dictionary):
+        # We override the default field access in order to support
+        # lists in HTML forms.
         if isinstance(dictionary, MultiDict):
             return parse_html_list(dictionary, prefix=self.field_name)
         return dictionary.get(self.field_name, empty)
