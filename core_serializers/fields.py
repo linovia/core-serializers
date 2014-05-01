@@ -11,6 +11,10 @@ class empty:
     pass
 
 
+class ValidationError(Exception):
+    pass
+
+
 class BaseField(object):
     """
     This class is provided as the miminal field interface.
@@ -52,6 +56,10 @@ class BaseField(object):
 
 
 class Field(BaseField):
+    error_messages = {
+        'required': 'This field is required.'
+    }
+
     def __init__(self, read_only=False, write_only=False,
                  required=None, default=empty, initial=None, source=None):
         super(Field, self).__init__()
@@ -164,7 +172,7 @@ class Field(BaseField):
         if self.read_only:
             return empty
         elif data is empty and self.required:
-            raise ValueError('required')
+            raise ValidationError(self.error_messages['required'])
         elif data is empty:
             return self.get_default()
         return self.to_native(data)
@@ -210,11 +218,16 @@ class CharField(Field):
 
 
 class IntegerField(Field):
+    error_messages = {
+        'required': 'This field is required.',
+        'invalid_integer': 'A valid integer is required.'
+    }
+
     def to_native(self, data):
         try:
             data = int(str(data))
         except (ValueError, TypeError):
-            raise ValueError('invalid integer')
+            raise ValidationError(self.error_messages['invalid_integer'])
         return data
 
 
