@@ -142,25 +142,3 @@ class TestStarredSource:
         """
         obj = serializers.BasicObject(a=1, b=2, c=3, d=4)
         assert self.serializer.serialize(obj) == self.data
-
-
-class TestMethodField:
-    def get_serializer(self):
-        class TestSerializer(serializers.Serializer):
-            username = fields.Field()
-            class_name = fields.MethodField()
-
-            def get_class_name(self, instance):
-                return instance.__class__.__name__
-
-        return TestSerializer()
-
-    def test_method_field(self):
-        serializer = self.get_serializer()
-        obj = serializers.BasicObject(
-            username = 'abcdefghijklmnopqrstuvwzyz'
-        )
-        assert serializer.serialize(obj) == {
-            'username': 'abcdefghijklmnopqrstuvwzyz',
-            'class_name': 'BasicObject'
-        }

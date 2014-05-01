@@ -1,4 +1,4 @@
-from core_serializers import fields
+from core_serializers import fields, serializers
 from core_serializers.fields import empty
 import random
 
@@ -52,6 +52,8 @@ def test_write_only_field():
     assert field.serialize(num) == empty
 
 
+# Tests for typed fields
+
 class TestBooleanField:
     expected_mappings = {
         'true': True,
@@ -92,3 +94,22 @@ class TestIntegerField:
         """
         for input_value, expected_output in self.expected_mappings.items():
             assert self.field.validate(input_value) == expected_output
+
+
+# Tests for complex fields
+
+class TestMethodField:
+    def setup(self):
+        class TestSerializer(serializers.Serializer):
+            example_method_field = fields.MethodField()
+
+            def get_example_method_field(self, instance):
+                return repr(instance)
+
+        self.serializer = TestSerializer()
+
+    def test_method_field(self):
+        obj = serializers.BasicObject(a=1)
+        assert self.serializer.serialize(obj) == {
+            'example_method_field': "<BasicObject 'a': 1>"
+        }

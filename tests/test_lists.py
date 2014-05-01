@@ -1,7 +1,12 @@
 from core_serializers import serializers, fields, BasicObject, MultiDict
 
 
-class TestSimpleListSerializer:
+class TestListSerializer:
+    """
+    Tests for using a ListSerializer as a top-level serializer.
+    Note that this is in contrast to using ListSerializer as a field.
+    """
+
     def setup(self):
         self.serializer = serializers.ListSerializer(fields.IntegerField())
 
@@ -22,7 +27,11 @@ class TestSimpleListSerializer:
         assert self.serializer.validate(input_data) == expected_output
 
 
-class TestListSerializer:
+class TestListSerializerContainingNestedSerializer:
+    """
+    Tests for using a ListSerializer containing another serializer.
+    """
+
     def setup(self):
         class TestSerializer(serializers.Serializer):
             integer = fields.IntegerField()
@@ -90,6 +99,10 @@ class TestListSerializer:
 
 
 class TestNestedListSerializer:
+    """
+    Tests for using a ListSerializer as a field.
+    """
+
     def setup(self):
         class TestSerializer(serializers.Serializer):
             integers = serializers.ListSerializer(fields.IntegerField())
@@ -168,6 +181,18 @@ class TestNestedListOfListsSerializer:
                             fields.BooleanField()))
 
         self.serializer = TestSerializer()
+
+    def test_validate(self):
+        input_data = {
+            'integers': [['123', '456'], ['789', '0']],
+            'booleans': [['true', 'true'], ['false', 'true']]
+        }
+        expected_output = {
+            "integers": [[123, 456], [789, 0]],
+            "booleans": [[True, True], [False, True]]
+        }
+        assert self.serializer.validate(input_data) == expected_output
+
 
     def test_validate_html_input(self):
         """
