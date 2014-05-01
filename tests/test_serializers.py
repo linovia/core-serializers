@@ -28,23 +28,28 @@ class TestSerializer:
         assert obj.b == 4
 
 
-def test_value_serializer():
-    class TestSerializer(serializers.Serializer):
-        a = fields.CharField()
-        b = fields.IntegerField()
-        c = fields.BooleanField()
+class TestSerializerWithTypedFields:
+    def setup(self):
+        class TestSerializer(serializers.Serializer):
+            a = fields.CharField()
+            b = fields.IntegerField()
+            c = fields.BooleanField()
+        self.serializer = TestSerializer()
 
-    serializer = TestSerializer()
-    data = {
-        'a': random.choice('abcdefghijklmnopqrstuvwxyz'),
-        'b': str(random.randint(1, 10)),
-        'c': random.choice(['true', 'false']),
-    }
-
-    validated = serializer.validate(data)
-    assert validated['a'] == data['a']
-    assert validated['b'] == int(data['b'])
-    assert validated['c'] == (True if data['c'] == 'true' else False)
+    def test_validate(self):
+        """
+        Typed fields are validated from the primative representation into
+        their internal type.
+        """
+        data = {
+            'a': 'abc',
+            'b': '1',
+            'c': 'true',
+        }
+        validated = self.serializer.validate(data)
+        assert validated['a'] == 'abc'
+        assert validated['b'] == 1
+        assert validated['c'] == True
 
 
 def test_nested_serializer_not_required():
