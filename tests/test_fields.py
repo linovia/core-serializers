@@ -50,3 +50,45 @@ def test_write_only_field():
     num = random.randint(1, 10)
     field = fields.Field(write_only=True)
     assert field.serialize(num) == empty
+
+
+class TestBooleanField:
+    expected_mappings = {
+        'true': True,
+        'false': False,
+        '1': True,
+        '0': False,
+        1: True,
+        0: False,
+        True: True,
+        False: False,
+    }
+
+    def setup(self):
+        self.field = fields.BooleanField()
+
+    def test_valid_values(self):
+        """
+        Valid input should validate as a boolean.
+        """
+        for input_value, expected_output in self.expected_mappings.items():
+            assert self.field.validate(input_value) == expected_output
+
+
+class TestIntegerField:
+    expected_mappings = {
+        '1': 1,
+        '0': 0,
+        1: 1,
+        0: 0,
+    }
+
+    def setup(self):
+        self.field = fields.IntegerField()
+
+    def test_valid_values(self):
+        """
+        Valid input should validate as an integer.
+        """
+        for input_value, expected_output in self.expected_mappings.items():
+            assert self.field.validate(input_value) == expected_output
