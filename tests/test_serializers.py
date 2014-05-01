@@ -83,18 +83,19 @@ def test_nested_serializer_not_required():
 
 
 class TestStarredSource:
+    """
+    Tests for `source='*'` argument, which is used for nested representations.
+
+    For example:
+
+        nested_field = NestedField(source='*')
+    """
     data = {
-        'nested1': {
-            'a': random.randint(1, 10),
-            'b': random.randint(1, 10),
-        },
-        'nested2': {
-            'c': random.randint(1, 10),
-            'd': random.randint(1, 10),
-        }
+        'nested1': {'a': 1, 'b': 2},
+        'nested2': {'c': 3, 'd': 4}
     }
 
-    def get_serializer(self):
+    def setup(self):
         class NestedSerializer1(serializers.Serializer):
             a = fields.Field()
             b = fields.Field()
@@ -107,34 +108,35 @@ class TestStarredSource:
             nested1 = NestedSerializer1(source='*')
             nested2 = NestedSerializer2(source='*')
 
-        return TestSerializer()
+        self.serializer = TestSerializer()
 
     def test_nested_validate(self):
-        serializer = self.get_serializer()
-        assert serializer.validate(self.data) == {
-            'a': self.data['nested1']['a'],
-            'b': self.data['nested1']['b'],
-            'c': self.data['nested2']['c'],
-            'd': self.data['nested2']['d']
+        """
+        A nested representation is validated into a flat internal object.
+        """
+        assert self.serializer.validate(self.data) == {
+            'a': 1,
+            'b': 2,
+            'c': 3,
+            'd': 4
         }
 
     def test_nested_create(self):
-        serializer = self.get_serializer()
-        obj = serializer.create(self.data)
-        assert obj.a == self.data['nested1']['a']
-        assert obj.b == self.data['nested1']['b']
-        assert obj.c == self.data['nested2']['c']
-        assert obj.d == self.data['nested2']['d']
+        """
+        A nested representation creates an object using the nested values.
+        """
+        obj = self.serializer.create(self.data)
+        assert obj.a == 1
+        assert obj.b == 2
+        assert obj.c == 3
+        assert obj.d == 4
 
     def test_nested_serialize(self):
-        serializer = self.get_serializer()
-        obj = serializers.BasicObject(
-            a=self.data['nested1']['a'],
-            b=self.data['nested1']['b'],
-            c=self.data['nested2']['c'],
-            d=self.data['nested2']['d']
-        )
-        assert serializer.serialize(obj) == self.data
+        """
+        An object can be serialized into a nested representation.
+        """
+        obj = serializers.BasicObject(a=1, b=2, c=3, d=4)
+        assert self.serializer.serialize(obj) == self.data
 
 
 class TestMethodField:
