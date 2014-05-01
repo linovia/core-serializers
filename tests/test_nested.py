@@ -1,5 +1,4 @@
 from core_serializers import serializers, fields, BasicObject, MultiDict
-import random
 
 
 class TestListSerializer:

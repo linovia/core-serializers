@@ -1,55 +1,59 @@
 from core_serializers import fields, serializers
-from core_serializers.fields import empty
-import random
+from core_serializers.fields import empty, ValidationError
+import pytest
 
 
 def test_validate():
     """
     By default a field should simply return the data it validates.
     """
-    num = random.randint(1, 10)
     field = fields.Field()
-    assert field.validate(num) == num
+    assert field.validate(123) == 123
 
 def test_validate_no_data():
     """
-    By default a field should simply return the data it validates.
+    By default a field should raise a ValidationError if no data is
+    passed to it when validating.
     """
-    num = random.randint(1, 10)
+    field = fields.Field()
+    with pytest.raises(ValidationError):
+        assert field.validate()
+
+def test_field_not_required():
+    """
+    A field with `required=False` should not raise validation errors if
+    not passed any value to validate.
+    """
     field = fields.Field(required=False)
-    assert field.validate(empty) == empty
+    assert field.validate() == empty
 
 def test_read_only_field():
     """
     A read-only field should always return empty data when validating.
     """
-    num = random.randint(1, 10)
     field = fields.Field(read_only=True)
-    assert field.validate(num) == empty
+    assert field.validate(123) == empty
 
 def test_default_field():
     """
     A field with a default value should return it when validating empty data.
     """
-    num = random.randint(1, 10)
-    field = fields.Field(default=num)
-    assert field.validate(empty) == num
+    field = fields.Field(default=123)
+    assert field.validate() == 123
 
 def test_serialize():
     """
     By default a field should simply return the data it serializes.
     """
-    num = random.randint(1, 10)
     field = fields.Field()
-    assert field.serialize(num) == num
+    assert field.serialize(123) == 123
 
 def test_write_only_field():
     """
     A write-only field should always return empty data when serializing.
     """
-    num = random.randint(1, 10)
     field = fields.Field(write_only=True)
-    assert field.serialize(num) == empty
+    assert field.serialize(123) == empty
 
 
 # Tests for typed fields
@@ -95,6 +99,13 @@ class TestIntegerField:
         for input_value, expected_output in self.expected_mappings.items():
             assert self.field.validate(input_value) == expected_output
 
+    def test_invalid_value(self):
+        """
+        Invalid input should raise a validation error.
+        """
+        with pytest.raises(ValidationError) as exc_info:
+            self.field.validate('abc')
+        assert str(exc_info.value) == 'A valid integer is required.'
 
 # Tests for complex fields
 

@@ -1,6 +1,6 @@
 from collections import OrderedDict
 from core_serializers.common import BasicObject, FieldDict
-from core_serializers.fields import Field, empty
+from core_serializers.fields import ValidationError, Field, empty
 from core_serializers.formutils import MultiDict, parse_html_dict, parse_html_list
 import copy
 
@@ -70,12 +70,18 @@ class Serializer(Field):
         Dict of native values <- Dict of primitive datatypes.
         """
         ret = {}
+        errors = {}
 
         for field in self.fields.values():
-            primitive_value = field.get_primitive_value(data)
-            native_value = field.validate(primitive_value)
-            field.set_native_value(ret, native_value)
+            try:
+                primitive_value = field.get_primitive_value(data)
+                native_value = field.validate(primitive_value)
+                field.set_native_value(ret, native_value)
+            except ValidationError as exc:
+                errors[field.field_name] = str(exc)
 
+        if errors:
+            raise ValidationError(errors)
         return ret
 
     def to_primitive(self, instance):

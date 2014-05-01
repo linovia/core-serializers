@@ -1,6 +1,6 @@
-from core_serializers import fields
+from core_serializers import fields, ValidationError
 from core_serializers import serializers
-import random
+import pytest
 
 
 class TestSerializer:
@@ -26,6 +26,12 @@ class TestSerializer:
         self.serializer.update(obj, data)
         assert obj.a == 3
         assert obj.b == 4
+
+    def test_invalid_value(self):
+        data = {'b': 2}
+        with pytest.raises(ValidationError) as exc_info:
+            self.serializer.validate(data)
+
 
 
 class TestSerializerWithTypedFields:
@@ -61,10 +67,7 @@ def test_nested_serializer_not_required():
         nested = NestedSerializer(required=False)
         a = fields.Field()
 
-    data = {
-        'a': random.randint(1, 10),
-    }
-
+    data = {'a': 1}
     serializer = TestSerializer()
     assert data == serializer.validate(data)
 
