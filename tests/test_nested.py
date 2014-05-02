@@ -27,7 +27,6 @@ class TestListSerializer:
         }
         assert self.serializer.validate(input_data) == expected_data
 
-
     def test_nested_create(self):
         input_data = {
             'nested': {

@@ -41,7 +41,8 @@ class TestListSerializerContainingNestedSerializer:
 
     def test_validate(self):
         """
-        Validating a list of dictionaries should return a list of validated dictionaries.
+        Validating a list of dictionaries should return a list of
+        validated dictionaries.
         """
         input_data = [
             {"integer": "123", "boolean": "true"},
@@ -83,7 +84,8 @@ class TestListSerializerContainingNestedSerializer:
 
     def test_validate_html_input(self):
         """
-        HTML input should be able to mock list structures using [x] style prefixes.
+        HTML input should be able to mock list structures using [x]
+        style prefixes.
         """
         input_data = MultiDict({
             "[0]integer": "123",
@@ -155,7 +157,8 @@ class TestNestedListSerializer:
 
     def test_validate_html_input(self):
         """
-        HTML input should be able to mock list structures using [x] style prefixes.
+        HTML input should be able to mock list structures using [x]
+        style prefixes.
         """
         input_data = MultiDict({
             "integers[0]": "123",
@@ -196,7 +199,8 @@ class TestNestedListOfListsSerializer:
 
     def test_validate_html_input(self):
         """
-        HTML input should be able to mock lists of lists using [x][y] style prefixes.
+        HTML input should be able to mock lists of lists using [x][y]
+        style prefixes.
         """
         input_data = MultiDict({
             "integers[0][0]": "123",
