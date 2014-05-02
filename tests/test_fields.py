@@ -48,12 +48,30 @@ def test_serialize():
     field = fields.Field()
     assert field.serialize(123) == 123
 
+def test_initial_field():
+    """
+    A field with an initial value should return it when serializing empty data.
+    """
+    field = fields.Field(initial=123)
+    field.setup('', None, None)
+    assert field.get_native_value() == 123
+
 def test_write_only_field():
     """
     A write-only field should always return empty data when serializing.
     """
     field = fields.Field(write_only=True)
     assert field.serialize(123) == empty
+
+class TestInitialValue:
+    def setup(self):
+        class TestSerializer(serializers.Serializer):
+            field = fields.IntegerField(initial=123)
+        self.serializer = TestSerializer()
+
+    def test_initial(self):
+        data = self.serializer.serialize()
+        assert data == {'field': 123}
 
 
 # Tests for typed fields
@@ -106,6 +124,7 @@ class TestIntegerField:
         with pytest.raises(ValidationError) as exc_info:
             self.field.validate('abc')
         assert str(exc_info.value) == 'A valid integer is required.'
+
 
 # Tests for complex fields
 

@@ -1,7 +1,8 @@
 from collections import OrderedDict
-from core_serializers.common import BasicObject, FieldDict
 from core_serializers.fields import ValidationError, Field, empty
-from core_serializers.formutils import MultiDict, parse_html_dict, parse_html_list
+from core_serializers.utils import (
+    BasicObject, FieldDict, MultiDict, parse_html_dict, parse_html_list
+)
 import copy
 
 

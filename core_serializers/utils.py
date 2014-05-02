@@ -1,5 +1,57 @@
-from collections import defaultdict
+from core_serializers.compat import (
+    iterkeys, itervalues, iteritems, iterlists,
+    iter_multi_items, native_itermethods
+)
+from collections import defaultdict, OrderedDict
 import re
+
+
+class BasicObject(object):
+    """
+    A basic object that simply sets whatever attributes are
+    passed to it at initialization.
+
+    The default Serializer class uses this on `create()`.
+    """
+
+    def __init__(self, **kwargs):
+        for key, value in kwargs.items():
+            setattr(self, key, value) 
+
+    def __repr__(self):
+        attributes = str(self.__dict__).lstrip('{').rstrip('}')
+        return '<BasicObject %s>' % attributes
+
+    def __eq__(self, other):
+        return self.__dict__ == other.__dict__
+
+
+class FieldDict(OrderedDict):
+    """
+    A dictionary class that can additionally presents an interface for
+    storing and retrieving the field instance that was used for each key.
+    """
+
+    def __init__(self):
+        super(FieldDict, self).__init__()
+        self._fields = {}
+
+    def set_item(self, key, value, field):
+        """
+        Sets a key-value pair, additionally storing the field used.
+        """
+        self[key] = value
+        self._fields[key] = field
+
+    def field_items(self):
+        """
+        Returns a three-tuple of (key, value, field) for each item.
+        """
+        for key, value in self.items():
+            yield key, value, self._fields[key]
+
+    def __repr__(self):
+        return '<FieldDict %s>' % dict.__repr__(self)
 
 
 def parse_html_list(dictionary, prefix=''):
@@ -77,93 +129,6 @@ def parse_html_dict(dictionary, prefix):
         key = match.groups()[0]
         ret[key] = value
     return ret
-
-
-
-
-
-# Copyright (c) 2013 by the Werkzeug Team, see AUTHORS for more details.
-
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are
-# met:
-
-#     * Redistributions of source code must retain the above copyright
-#       notice, this list of conditions and the following disclaimer.
-
-#     * Redistributions in binary form must reproduce the above
-#       copyright notice, this list of conditions and the following
-#       disclaimer in the documentation and/or other materials provided
-#       with the distribution.
-
-#     * The names of the contributors may not be used to endorse or
-#       promote products derived from this software without specific
-#       prior written permission.
-
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-# A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-# OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-# LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-import sys
-
-PY2 = sys.version_info[0] == 2
-
-if PY2:
-
-    iterkeys = lambda d, *args, **kwargs: d.iterkeys(*args, **kwargs)
-    itervalues = lambda d, *args, **kwargs: d.itervalues(*args, **kwargs)
-    iteritems = lambda d, *args, **kwargs: d.iteritems(*args, **kwargs)
-    iterlists = lambda d, *args, **kwargs: d.iterlists(*args, **kwargs)
-
-else:
-    iterkeys = lambda d, *args, **kwargs: iter(d.keys(*args, **kwargs))
-    itervalues = lambda d, *args, **kwargs: iter(d.values(*args, **kwargs))
-    iteritems = lambda d, *args, **kwargs: iter(d.items(*args, **kwargs))
-    iterlists = lambda d, *args, **kwargs: iter(d.lists(*args, **kwargs))
-
-
-def iter_multi_items(mapping):
-    """Iterates over the items of a mapping yielding keys and values
-    without dropping any from more complex structures.
-    """
-    if isinstance(mapping, MultiDict):
-        for item in iteritems(mapping, multi=True):
-            yield item
-    elif isinstance(mapping, dict):
-        for key, value in iteritems(mapping):
-            if isinstance(value, (tuple, list)):
-                for value in value:
-                    yield key, value
-            else:
-                yield key, value
-    else:
-        for item in mapping:
-            yield item
-
-
-def native_itermethods(names):
-    if not PY2:
-        return lambda x: x
-    def setmethod(cls, name):
-        itermethod = getattr(cls, name)
-        setattr(cls, 'iter%s' % name, itermethod)
-        listmethod = lambda self, *a, **kw: list(itermethod(self, *a, **kw))
-        listmethod.__doc__ = 'Like `iter%s`, but returns a list.' % name
-        setattr(cls, name, listmethod)
-
-    def wrap(cls):
-        for name in names:
-            setmethod(cls, name)
-        return cls
-    return wrap
 
 
 class _Missing(object):

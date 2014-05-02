@@ -1,4 +1,4 @@
-from core_serializers.common import FieldDict
+from core_serializers.utils import FieldDict
 
 
 class empty:
@@ -90,7 +90,7 @@ class Field(BaseField):
         self.root = root
         if self.source is None:
             self.source = field_name
-        if root.partial:
+        if getattr(root, 'partial', False):
             self.required = False
 
     def get_primitive_value(self, dictionary):
@@ -118,7 +118,7 @@ class Field(BaseField):
 
         dictionary[key] = value
 
-    def get_native_value(self, instance):
+    def get_native_value(self, instance=empty):
         """
         Given an object instance, return the attribute value that this
         field should serialize.
@@ -139,7 +139,7 @@ class Field(BaseField):
 
         return getattr(instance, key)
 
-    def set_primitive_value(self, dictionary, value):
+    def set_primitive_value(self, dictionary, value=empty):
         if value is empty:
             return
         if isinstance(dictionary, FieldDict):
