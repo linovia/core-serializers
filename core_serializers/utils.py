@@ -456,4 +456,7 @@ class MultiDict(dict):
         return self.deepcopy(memo=memo)
 
     def __repr__(self):
-        return '%s(%r)' % (self.__class__.__name__, list(iteritems(self, multi=True)))
+        return '%s(%r)' % (
+            self.__class__.__name__,
+            list(iteritems(self, multi=True))
+        )
