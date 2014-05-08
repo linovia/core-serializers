@@ -61,7 +61,8 @@ class Field(BaseField):
     }
 
     def __init__(self, read_only=False, write_only=False,
-                 required=None, default=empty, initial=None, source=None):
+                 required=None, default=empty, initial=None, source=None,
+                 label=None, style=None):
         super(Field, self).__init__()
 
         # If `required` is unset, then use `True` unless a default is provided.
@@ -80,6 +81,8 @@ class Field(BaseField):
         self.default = default
         self.source = source
         self.initial = initial
+        self.label = label
+        self.style = {} if style is None else style
 
     def setup(self, field_name, parent, root):
         """
@@ -92,6 +95,8 @@ class Field(BaseField):
             self.source = field_name
         if getattr(root, 'partial', False):
             self.required = False
+        if self.label is None:
+            self.label = field_name
 
     def get_primitive_value(self, dictionary):
         return dictionary.get(self.field_name, empty)
@@ -213,7 +218,18 @@ class BooleanField(Field):
 
 
 class CharField(Field):
+    error_messages = {
+        'required': 'This field is required.',
+        'blank': 'This field may not be blank.'
+    }
+
+    def __init__(self, *args, **kwargs):
+        self.allow_blank = kwargs.pop('allow_blank', False)
+        super(CharField, self).__init__(*args, **kwargs)
+
     def to_native(self, data):
+        if data == '' and not self.allow_blank:
+            raise ValidationError(self.error_messages['blank'])
         return str(data)
 
 

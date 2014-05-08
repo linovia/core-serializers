@@ -133,7 +133,53 @@ class TestInitial:
         assert data == {'initial_field': 123, 'blank_field': None}
 
 
+class TestLabel:
+    def setup(self):
+        class TestSerializer(serializers.Serializer):
+            unlabeled = fields.IntegerField()
+            labeled = fields.IntegerField(label='My label')
+        self.serializer = TestSerializer()
+
+    def test_default_label_is_field_name(self):
+        """
+        If unset, then a field's default label is the same as it's field name.
+        """
+        fields = self.serializer.fields
+        assert fields['unlabeled'].label == 'unlabeled'
+
+    def test_explicit_label(self):
+        """
+        A field's label may be explicitly set with the `label` argument.
+        """
+        fields = self.serializer.fields
+        assert fields['labeled'].label == 'My label'
+
 # Tests for typed fields
+
+class TestCharField:
+    expected_mappings = {
+        1: '1',
+        'abc': 'abc'
+    }
+
+    def setup(self):
+        self.field = fields.CharField()
+
+    def test_valid_values(self):
+        """
+        Valid input should validate as a boolean.
+        """
+        for input_value, expected_output in self.expected_mappings.items():
+            assert self.field.validate(input_value) == expected_output
+
+    def test_blank(self):
+        """
+        Blank input should raise a validation error.
+        """
+        with pytest.raises(ValidationError) as exc_info:
+            self.field.validate('')
+        assert str(exc_info.value) == 'This field may not be blank.'
+
 
 class TestBooleanField:
     expected_mappings = {
