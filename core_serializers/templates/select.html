@@ -1,0 +1,6 @@
+<select class="form-control" name="{{ field.field_name }}">
+    {% if field.label %}<label>{{ field.label }}</label>{% endif %}
+    {% for key, text in field.choices.items() %}
+    <option value="{{ key }}" {% if key==value %}selected{% endif %}>{{ text }}</option>
+    {% endfor %}
+</select>

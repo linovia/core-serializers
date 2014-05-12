@@ -4,11 +4,11 @@ import copy
 
 def strip(text):
     """
-    Strip leading and trailing whitespace from every line in a string
-    for neater whitespace-ignoring comparisons.
+    Strip leading and trailing whitespace from every line in a string, and
+    ignore blank lines. Used for neater whitespace-ignoring comparisons.
     """
     lines = text.strip().splitlines()
-    return '\n'.join([line.strip() for line in lines])
+    return '\n'.join([line.strip() for line in lines if line.strip()])
 
 
 class HTMLFormsBaseCase:
@@ -38,13 +38,13 @@ class TestInput(HTMLFormsBaseCase):
     empty_html = """
         <div class="form-group">
             <label>Text input</label>
-            <input class="form-control" id="field_name">
+            <input class="form-control" name="field_name">
         </div>
     """
     populated_html = """
         <div class="form-group">
             <label>Text input</label>
-            <input class="form-control" id="field_name" value="example">
+            <input class="form-control" name="field_name" value="example">
         </div>
     """
 
@@ -58,32 +58,69 @@ class TestTextArea(HTMLFormsBaseCase):
     empty_html = """
         <div class="form-group">
             <label>Textarea</label>
-            <textarea class="form-control" id="field_name" rows=5>
+            <textarea class="form-control" name="field_name" rows=5>
         </div>
     """
     populated_html = """
         <div class="form-group">
             <label>Textarea</label>
-            <textarea class="form-control" id="field_name" value="longer example text" rows=5>
+            <textarea class="form-control" name="field_name" value="longer example text" rows=5>
         </div>
     """
 
 
-# class TestSelect(HTMLFormsBaseCase):
-#     base_field = fields.ChoiceField(
-#         choices=[(1, 'Option one'), (2, 'Option two')],
-#         default=2
-#     )
-#     populated_value = 1
-#     empty_value = """
-#         <select class="form-control">
-#           <option value="1">Option one</option>
-#           <option value="2" selected>Option two</option>
-#         </select>
-#     """
-#     populated_html = """
-#         <select class="form-control">
-#           <option value="1" selected>Option one</option>
-#           <option value="2">Option two</option>
-#         </select>
-#     """
+class TestSelect(HTMLFormsBaseCase):
+    base_field = fields.ChoiceField(
+        choices=[(1, 'Option one'), (2, 'Option two')],
+        initial=2
+    )
+    populated_value = 1
+    empty_html = """
+        <select class="form-control" name="field_name">
+          <option value="1" >Option one</option>
+          <option value="2" selected>Option two</option>
+        </select>
+    """
+    populated_html = """
+        <select class="form-control" name="field_name">
+          <option value="1" selected>Option one</option>
+          <option value="2" >Option two</option>
+        </select>
+    """
+
+
+class TestRadio(HTMLFormsBaseCase):
+    base_field = fields.ChoiceField(
+        choices=[(1, 'Option one'), (2, 'Option two')],
+        initial=2,
+        style={'type': 'radio'}
+    )
+    populated_value = 1
+    empty_html = """
+    <div class="radio">
+        <label>
+            <input type="radio" name="field_name" value="1" >
+            Option one
+        </label>
+    </div>
+    <div class="radio">
+        <label>
+            <input type="radio" name="field_name" value="2" checked>
+            Option two
+        </label>
+    </div>
+    """
+    populated_html = """
+    <div class="radio">
+        <label>
+            <input type="radio" name="field_name" value="1" checked>
+            Option one
+        </label>
+    </div>
+    <div class="radio">
+        <label>
+            <input type="radio" name="field_name" value="2" >
+            Option two
+        </label>
+    </div>
+    """

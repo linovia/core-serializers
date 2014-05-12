@@ -134,20 +134,12 @@ class TestInitial:
 class TestLabel:
     def setup(self):
         class TestSerializer(serializers.Serializer):
-            unlabeled = fields.IntegerField()
             labeled = fields.IntegerField(label='My label')
         self.serializer = TestSerializer()
 
-    def test_default_label_is_field_name(self):
+    def test_label(self):
         """
-        If unset, then a field's default label is the same as it's field name.
-        """
-        fields = self.serializer.fields
-        assert fields['unlabeled'].label == 'unlabeled'
-
-    def test_explicit_label(self):
-        """
-        A field's label may be explicitly set with the `label` argument.
+        A field's label may be set with the `label` argument.
         """
         fields = self.serializer.fields
         assert fields['labeled'].label == 'My label'

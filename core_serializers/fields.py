@@ -95,8 +95,6 @@ class Field(BaseField):
             self.source = field_name
         if getattr(root, 'partial', False):
             self.required = False
-        if self.label is None:
-            self.label = field_name
 
     def get_primitive_value(self, dictionary):
         return dictionary.get(self.field_name, empty)
