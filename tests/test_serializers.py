@@ -6,8 +6,8 @@ import pytest
 class TestSerializer:
     def setup(self):
         class TestSerializer(serializers.Serializer):
-            a = fields.Field()
-            b = fields.Field()
+            a = fields.IntegerField()
+            b = fields.IntegerField()
         self.serializer = TestSerializer()
 
     def test_validate(self):
@@ -27,11 +27,17 @@ class TestSerializer:
         assert obj.a == 3
         assert obj.b == 4
 
-    def test_invalid_value(self):
+    def test_missing_value(self):
         data = {'b': 2}
         with pytest.raises(ValidationError) as exc_info:
             self.serializer.validate(data)
+        assert str(exc_info.value) == "{'a': 'This field is required.'}"
 
+    def test_invalid_value(self):
+        data = {'a': 'abc', 'b': 2}
+        with pytest.raises(ValidationError) as exc_info:
+            self.serializer.validate(data)
+        assert str(exc_info.value) == "{'a': 'A valid integer is required.'}"
 
 
 class TestSerializerWithTypedFields:

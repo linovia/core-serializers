@@ -28,8 +28,6 @@ class TestField:
         assert self.field.serialize(123) == 123
 
 
-# Tests for field options
-
 class TestNotRequired:
     def setup(self):
         class TestSerializer(serializers.Serializer):
@@ -154,81 +152,26 @@ class TestLabel:
         fields = self.serializer.fields
         assert fields['labeled'].label == 'My label'
 
-# Tests for typed fields
 
-class TestCharField:
-    expected_mappings = {
-        1: '1',
-        'abc': 'abc'
-    }
-
+class TestInvalidErrorKey:
     def setup(self):
-        self.field = fields.CharField()
+        class ExampleField(serializers.Field):
+            def to_native(self, data):
+                self.fail('incorrect')
+        self.field = ExampleField()
 
-    def test_valid_values(self):
+    def test_invalid_error_key(self):
         """
-        Valid input should validate as a boolean.
+        If a field raises a validation error, but does not have a corresponding
+        error message, then raise an appropriate assertion error.
         """
-        for input_value, expected_output in self.expected_mappings.items():
-            assert self.field.validate(input_value) == expected_output
-
-    def test_blank(self):
-        """
-        Blank input should raise a validation error.
-        """
-        with pytest.raises(ValidationError) as exc_info:
-            self.field.validate('')
-        assert str(exc_info.value) == 'This field may not be blank.'
-
-
-class TestBooleanField:
-    expected_mappings = {
-        'true': True,
-        'false': False,
-        '1': True,
-        '0': False,
-        1: True,
-        0: False,
-        True: True,
-        False: False,
-    }
-
-    def setup(self):
-        self.field = fields.BooleanField()
-
-    def test_valid_values(self):
-        """
-        Valid input should validate as a boolean.
-        """
-        for input_value, expected_output in self.expected_mappings.items():
-            assert self.field.validate(input_value) == expected_output
-
-
-class TestIntegerField:
-    expected_mappings = {
-        '1': 1,
-        '0': 0,
-        1: 1,
-        0: 0,
-    }
-
-    def setup(self):
-        self.field = fields.IntegerField()
-
-    def test_valid_values(self):
-        """
-        Valid input should validate as an integer.
-        """
-        for input_value, expected_output in self.expected_mappings.items():
-            assert self.field.validate(input_value) == expected_output
-
-    def test_invalid_value(self):
-        """
-        Invalid input should raise a validation error.
-        """
-        with pytest.raises(ValidationError) as exc_info:
-            self.field.validate('abc')
-        assert str(exc_info.value) == 'A valid integer is required.'
+        with pytest.raises(AssertionError) as exc_info:
+            self.field.to_native(123)
+        assert (
+            str(exc_info.value) == 'ValidationError raised by ExampleField, '
+            'but error key `incorrect` does not exist in the '
+            '`ExampleField.error_messages` dictionary.'
+        )
 
 
 # Tests for complex fields

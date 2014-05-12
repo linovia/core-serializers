@@ -204,17 +204,31 @@ class Field(BaseField):
         """
         return value
 
+    def fail(self, key, **kwargs):
+        try:
+            raise ValidationError(self.error_messages[key].format(**kwargs))
+        except KeyError:
+            msg = 'ValidationError raised by {field_class}, but error key ' \
+                '`{key}` does not exist in the ' \
+                '`{field_class}.error_messages` dictionary.'
+            raise AssertionError(msg.format(
+                field_class=self.__class__.__name__, key=key))
 
 ### Typed field classes
 
 
 class BooleanField(Field):
+    error_messages = {
+        'required': 'This field is required.',
+        'invalid_value': '`{input}` is not a valid boolean.',
+    }
+
     def to_native(self, data):
-        if data in ('true', 't', 'True', '1'):
+        if data in ('true', 't', 'True', '1', 1, True):
             return True
-        if data in ('false', 'f', 'False', '0'):
+        elif data in ('false', 'f', 'False', '0', 0, 0.0, False):
             return False
-        return bool(data)
+        self.fail('invalid_value', input=data)
 
 
 class CharField(Field):
@@ -229,8 +243,55 @@ class CharField(Field):
 
     def to_native(self, data):
         if data == '' and not self.allow_blank:
-            raise ValidationError(self.error_messages['blank'])
+            self.fail('blank')
         return str(data)
+
+
+class ChoiceField(Field):
+    error_messages = {
+        'required': 'This field is required.',
+        'invalid_choice': '`{input}` is not a valid choice.',
+        'invalid_type': 'Expected type `{expected_type}` but got type `{input_type}`.'
+    }
+    coerce_to_type = str
+
+    def __init__(self, *args, **kwargs):
+        choices = kwargs.pop('choices')
+        pairs = [
+            isinstance(item, (list, tuple)) and len(item) == 2
+            for item in choices
+        ]
+        if all(pairs):
+            self.choices = {key: val for key, val in choices}
+        else:
+            self.choices = {item: item for item in choices}
+        self.coerce_to_type = kwargs.pop('type', self.coerce_to_type)
+        super(ChoiceField, self).__init__(*args, **kwargs)
+
+    def to_native(self, data):
+        try:
+            data = self.coerce_to_type(data)
+        except (TypeError, ValueError):
+            expected = self.coerce_to_type.__name__
+            seen = type(data).__name__
+            self.fail('invalid_type', expected_type=expected, input_type=seen)
+        if data not in self.choices:
+            self.fail('invalid_choice', input=data)
+        return data
+
+
+class MultipleChoiceField(ChoiceField):
+    error_messages = {
+        'required': 'This field is required.',
+        'invalid_choice': '`{input}` is not a valid choice.',
+        'invalid_type': 'Expected type `{expected_type}` but got type `{input_type}`.',
+        'not_a_list': 'Expected a list of items but got type `{input_type}`'
+    }
+
+    def to_native(self, data):
+        if not hasattr(data, '__iter__'):
+            self.fail('not_a_list', input_type=type(data).__name__)
+        return set([super(MultipleChoiceField, self).to_native(item) for item in data])
 
 
 class IntegerField(Field):
@@ -243,7 +304,7 @@ class IntegerField(Field):
         try:
             data = int(str(data))
         except (ValueError, TypeError):
-            raise ValidationError(self.error_messages['invalid_integer'])
+            self.fail('invalid_integer')
         return data
 
 
@@ -256,6 +317,6 @@ class MethodField(Field):
         super(MethodField, self).__init__(**kwargs)
 
     def serialize(self, value):
-        attr = 'get_%s' % self.field_name
+        attr = 'get_{field_name}'.format(field_name=self.field_name)
         method = getattr(self.parent, attr)
         return method(value)
