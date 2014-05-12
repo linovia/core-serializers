@@ -251,12 +251,17 @@ class ChoiceField(Field):
     error_messages = {
         'required': 'This field is required.',
         'invalid_choice': '`{input}` is not a valid choice.',
-        'invalid_type': 'Expected type `{expected_type}` but got type `{input_type}`.'
     }
     coerce_to_type = str
 
     def __init__(self, *args, **kwargs):
         choices = kwargs.pop('choices')
+
+        assert choices, '`choices` argument may not be empty'
+
+        # Allow either single or paired choices style:
+        # choices = [1, 2, 3]
+        # choices = [(1, 'First'), (2, 'Second'), (3, 'Third')]
         pairs = [
             isinstance(item, (list, tuple)) and len(item) == 2
             for item in choices
@@ -265,19 +270,21 @@ class ChoiceField(Field):
             self.choices = {key: val for key, val in choices}
         else:
             self.choices = {item: item for item in choices}
-        self.coerce_to_type = kwargs.pop('type', self.coerce_to_type)
+
+        # Map the string representation of choices to the underlying value.
+        # Allows us to deal with eg. integer choices while supporting either
+        # integer or string input, but still get the correct datatype out.
+        self.choice_strings_to_values = {
+            str(key): key for key in self.choices.keys()
+        }
+
         super(ChoiceField, self).__init__(*args, **kwargs)
 
     def to_native(self, data):
         try:
-            data = self.coerce_to_type(data)
-        except (TypeError, ValueError):
-            expected = self.coerce_to_type.__name__
-            seen = type(data).__name__
-            self.fail('invalid_type', expected_type=expected, input_type=seen)
-        if data not in self.choices:
+            return self.choice_strings_to_values[str(data)]
+        except KeyError:
             self.fail('invalid_choice', input=data)
-        return data
 
 
 class MultipleChoiceField(ChoiceField):
