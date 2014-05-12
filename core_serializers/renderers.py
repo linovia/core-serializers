@@ -16,5 +16,4 @@ class FormRenderer(object):
                 }[field.__class__.__name__]
             template = env.get_template(template_file)
             ret += template.render(value=value, field=field) + '\n'
-        print ret
         return ret
