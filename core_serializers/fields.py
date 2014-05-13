@@ -23,7 +23,7 @@ class BaseField(object):
     _creation_counter = 0
 
     _UNBOUND_FIELD = (
-        'Cannot access attribute {attr} on field {class_name}. '
+        'Cannot access attribute `{attr}` on field `{class_name}`. '
         'The field has not yet been bound to a serializer.'
     )
 

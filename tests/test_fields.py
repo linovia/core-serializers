@@ -166,6 +166,24 @@ class TestInvalidErrorKey:
         assert str(exc_info.value) == expected
 
 
+class TestUnboundAccess:
+    def setup(self):
+        self.field = fields.IntegerField(label='My label')
+
+    def test_unbound_access(self):
+        """
+        Attempting to get bind-time attributes on an unbound field will error.
+        """
+        for attr in ('field_name', 'parent', 'root'):
+            with pytest.raises(AssertionError) as exc_info:
+                getattr(self.field, attr)
+            expected = (
+                'Cannot access attribute `{attr}` on field `IntegerField`. '
+                'The field has not yet been bound to a serializer.'
+            ).format(attr=attr)
+            assert str(exc_info.value) == expected
+
+
 # Tests for complex fields
 
 class TestMethodField:
