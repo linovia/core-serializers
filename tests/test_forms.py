@@ -69,6 +69,29 @@ class TestTextArea(HTMLFormsBaseCase):
     """
 
 
+class TestCheckbox(HTMLFormsBaseCase):
+    base_field = fields.BooleanField(
+        label='Boolean field',
+    )
+    populated_value = True
+    empty_html = """
+        <div class="checkbox">
+            <label>
+                <input type="checkbox" name="field_name" value="true" >
+                Boolean field
+            </label>
+        </div>
+    """
+    populated_html = """
+        <div class="checkbox">
+            <label>
+                <input type="checkbox" name="field_name" value="true" checked>
+                Boolean field
+            </label>
+        </div>
+    """
+
+
 class TestSelect(HTMLFormsBaseCase):
     base_field = fields.ChoiceField(
         choices=[(1, 'Option one'), (2, 'Option two')],
