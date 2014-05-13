@@ -1,4 +1,5 @@
-from core_serializers import serializers, fields, BasicObject
+from core_serializers import serializers, fields
+from core_serializers.utils import BasicObject
 from werkzeug import MultiDict
 
 
@@ -178,11 +179,15 @@ class TestNestedListOfListsSerializer:
     def setup(self):
         class TestSerializer(serializers.Serializer):
             integers = serializers.ListSerializer(
-                        serializers.ListSerializer(
-                            fields.IntegerField()))
+                serializers.ListSerializer(
+                    fields.IntegerField()
+                )
+            )
             booleans = serializers.ListSerializer(
-                        serializers.ListSerializer(
-                            fields.BooleanField()))
+                serializers.ListSerializer(
+                    fields.BooleanField()
+                )
+            )
 
         self.serializer = TestSerializer()
 
@@ -196,7 +201,6 @@ class TestNestedListOfListsSerializer:
             "booleans": [[True, True], [False, True]]
         }
         assert self.serializer.validate(input_data) == expected_output
-
 
     def test_validate_html_input(self):
         """

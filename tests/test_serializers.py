@@ -1,5 +1,4 @@
-from core_serializers import fields, ValidationError
-from core_serializers import serializers
+from core_serializers import fields, serializers
 import pytest
 
 
@@ -29,13 +28,13 @@ class TestSerializer:
 
     def test_missing_value(self):
         data = {'b': 2}
-        with pytest.raises(ValidationError) as exc_info:
+        with pytest.raises(fields.ValidationError) as exc_info:
             self.serializer.validate(data)
         assert str(exc_info.value) == "{'a': 'This field is required.'}"
 
     def test_invalid_value(self):
         data = {'a': 'abc', 'b': 2}
-        with pytest.raises(ValidationError) as exc_info:
+        with pytest.raises(fields.ValidationError) as exc_info:
             self.serializer.validate(data)
         assert str(exc_info.value) == "{'a': 'A valid integer is required.'}"
 
@@ -61,7 +60,7 @@ class TestSerializerWithTypedFields:
         validated = self.serializer.validate(data)
         assert validated['a'] == 'abc'
         assert validated['b'] == 1
-        assert validated['c'] == True
+        assert validated['c']
 
 
 def test_nested_serializer_not_required():

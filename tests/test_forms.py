@@ -1,4 +1,5 @@
-from core_serializers import BasicObject, fields, renderers, serializers
+from core_serializers import fields, renderers, serializers
+from core_serializers.utils import BasicObject
 import copy
 
 
@@ -167,6 +168,7 @@ class TestRadio(HTMLFormsBaseCase):
             </label>
         </div>
     """
+
 
 class TestMultipleCheckbox(HTMLFormsBaseCase):
     base_field = fields.MultipleChoiceField(

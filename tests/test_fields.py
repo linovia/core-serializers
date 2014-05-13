@@ -1,5 +1,5 @@
-from core_serializers import fields, serializers, BasicObject
-from core_serializers.fields import empty, ValidationError
+from core_serializers import fields, serializers
+from core_serializers.utils import BasicObject
 import pytest
 
 
@@ -18,7 +18,7 @@ class TestField:
         By default a field should raise a ValidationError if no data is
         passed to it when validating.
         """
-        with pytest.raises(ValidationError):
+        with pytest.raises(fields.ValidationError):
             assert self.field.validate()
 
     def test_serialize(self):
@@ -105,7 +105,7 @@ class TestDefault:
         """
         data = {'no_default': 456}
         validated = self.serializer.validate(data)
-        assert validated == {'default':123, 'no_default': 456}
+        assert validated == {'default': 123, 'no_default': 456}
 
     def test_validate_default_not_used(self):
         """
@@ -159,11 +159,11 @@ class TestInvalidErrorKey:
         """
         with pytest.raises(AssertionError) as exc_info:
             self.field.to_native(123)
-        assert (
-            str(exc_info.value) == 'ValidationError raised by ExampleField, '
-            'but error key `incorrect` does not exist in the '
-            '`ExampleField.error_messages` dictionary.'
+        expected = (
+            'ValidationError raised by `ExampleField`, but error key '
+            '`incorrect` does not exist in the `MESSAGES` dictionary.'
         )
+        assert str(exc_info.value) == expected
 
 
 # Tests for complex fields

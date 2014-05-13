@@ -1,4 +1,5 @@
-from core_serializers import serializers, fields, BasicObject
+from core_serializers import serializers, fields
+from core_serializers.utils import BasicObject
 from werkzeug import MultiDict
 
 
@@ -42,7 +43,6 @@ class TestListSerializer:
             }
         )
         assert self.serializer.create(input_data) == expected_object
-
 
     def test_nested_update(self):
         update_object = serializers.BasicObject(

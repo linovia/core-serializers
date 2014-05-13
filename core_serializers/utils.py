@@ -1,8 +1,4 @@
-from core_serializers.compat import (
-    iterkeys, itervalues, iteritems, iterlists,
-    iter_multi_items, native_itermethods
-)
-from collections import defaultdict, OrderedDict
+from collections import OrderedDict
 import re
 
 
@@ -16,7 +12,7 @@ class BasicObject(object):
 
     def __init__(self, **kwargs):
         for key, value in kwargs.items():
-            setattr(self, key, value) 
+            setattr(self, key, value)
 
     def __repr__(self):
         attributes = str(self.__dict__).lstrip('{').rstrip('}')
@@ -36,7 +32,7 @@ class FieldDict(OrderedDict):
         super(FieldDict, self).__init__()
         self._fields = {}
 
-    def set_item(self, key, value, field):
+    def set_field_item(self, key, value, field):
         """
         Sets a key-value pair, additionally storing the field used.
         """
@@ -102,7 +98,7 @@ def parse_html_list(dictionary, prefix=''):
             ret[index][key] = value
         else:
             ret[index] = Dict({key: value})
-    return [ret[key] for key in sorted(ret.keys())]
+    return [ret[item] for item in sorted(ret.keys())]
 
 
 def parse_html_dict(dictionary, prefix):

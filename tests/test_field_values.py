@@ -1,5 +1,4 @@
 from core_serializers import fields
-from core_serializers.fields import ValidationError
 import copy
 import pytest
 
@@ -23,7 +22,7 @@ class ValidAndInvalidValues:
         Ensure that invalid values raise the expected validation error.
         """
         for input_value, expected_failure in self.invalid_mappings.items():
-            with pytest.raises(ValidationError) as exc_info:
+            with pytest.raises(fields.ValidationError) as exc_info:
                 self.field.validate(input_value)
             assert str(exc_info.value) == expected_failure
 

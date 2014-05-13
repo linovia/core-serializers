@@ -1,6 +1,3 @@
-from core_serializers.utils import FieldDict
-
-
 class empty:
     """
     This class is used to represent no data being provided for a given input
@@ -24,6 +21,11 @@ class BaseField(object):
     field behavior.
     """
     _creation_counter = 0
+
+    _UNBOUND_FIELD = (
+        'Cannot access attribute {attr} on field {class_name}. '
+        'The field has not yet been bound to a serializer.'
+    )
 
     def __init__(self):
         # The creation counter is required so that the serializer metaclass
@@ -54,11 +56,61 @@ class BaseField(object):
     def serialize(self, value):
         return value
 
+    # We protect `field_name`, `parent` and `root` attributes with accessors
+    # that ensure the user gets a helpful traceback if attempting to call
+    # methods on an unbound field.
+
+    def get_field_name(self):
+        try:
+            return self._field_name
+        except AttributeError:
+            class_name = self.__class__.__name__
+            msg = self._UNBOUND_FIELD.format(class_name=class_name, attr='field_name')
+            raise AssertionError(msg)
+
+    def get_parent(self):
+        try:
+            return self._parent
+        except AttributeError:
+            class_name = self.__class__.__name__
+            msg = self._UNBOUND_FIELD.format(class_name=class_name, attr='parent')
+            raise AssertionError(msg)
+
+    def get_root(self):
+        try:
+            return self._root
+        except AttributeError:
+            class_name = self.__class__.__name__
+            msg = self._UNBOUND_FIELD.format(class_name=class_name, attr='root')
+            raise AssertionError(msg)
+
+    def set_field_name(self, value):
+        self._field_name = value
+
+    def set_parent(self, value):
+        self._parent = value
+
+    def set_root(self, value):
+        self._root = value
+
+    field_name = property(get_field_name, set_field_name)
+    parent = property(get_parent, set_parent)
+    root = property(get_root, set_root)
+
 
 class Field(BaseField):
-    error_messages = {
+    MESSAGES = {
         'required': 'This field is required.'
     }
+
+    _NOT_READ_ONLY_WRITE_ONLY = 'May not set both `read_only` and `write_only`'
+    _NOT_READ_ONLY_REQUIRED = 'May not set both `read_only` and `required`'
+    _NOT_READ_ONLY_DEFAULT = 'May not set both `read_only` and `default`'
+    _NOT_REQUIRED_DEFAULT = 'May not set both `required` and `default`'
+    _MISSING_ERROR_MESSAGE = (
+        'ValidationError raised by `{class_name}`, but error key `{key}` does '
+        'not exist in the `MESSAGES` dictionary.'
+    )
 
     def __init__(self, read_only=False, write_only=False,
                  required=None, default=empty, initial=None, source=None,
@@ -70,10 +122,10 @@ class Field(BaseField):
             required = default is empty and not read_only
 
         # Some combinations of keyword arguments do not make sense.
-        assert not (read_only and write_only), 'May not set both `read_only` and `write_only`'
-        assert not (read_only and required), 'May not set both `read_only` and `required`'
-        assert not (read_only and default is not empty), 'May not set both `read_only` and `default`'
-        assert not (required and default is not empty), 'May not set both `required` and `default`'
+        assert not (read_only and write_only), self._NOT_READ_ONLY_WRITE_ONLY
+        assert not (read_only and required), self._NOT_READ_ONLY_REQUIRED
+        assert not (read_only and default is not empty), self._NOT_READ_ONLY_DEFAULT
+        assert not (required and default is not empty), self._NOT_REQUIRED_DEFAULT
 
         self.read_only = read_only
         self.write_only = write_only
@@ -145,8 +197,8 @@ class Field(BaseField):
     def set_primitive_value(self, dictionary, value=empty):
         if value is empty:
             return
-        if isinstance(dictionary, FieldDict):
-            dictionary.set_item(self.field_name, value, field=self)
+        if hasattr(dictionary, 'set_field_item'):
+            dictionary.set_field_item(self.field_name, value, field=self)
         else:
             dictionary[self.field_name] = value
 
@@ -175,7 +227,7 @@ class Field(BaseField):
         if self.read_only:
             return empty
         elif data is empty and self.required:
-            raise ValidationError(self.error_messages['required'])
+            self.fail('required')
         elif data is empty:
             return self.get_default()
         return self.to_native(data)
@@ -204,19 +256,15 @@ class Field(BaseField):
 
     def fail(self, key, **kwargs):
         try:
-            raise ValidationError(self.error_messages[key].format(**kwargs))
+            raise ValidationError(self.MESSAGES[key].format(**kwargs))
         except KeyError:
-            msg = 'ValidationError raised by {field_class}, but error key ' \
-                '`{key}` does not exist in the ' \
-                '`{field_class}.error_messages` dictionary.'
-            raise AssertionError(msg.format(
-                field_class=self.__class__.__name__, key=key))
-
-### Typed field classes
+            class_name = self.__class__.__name__
+            msg = self._MISSING_ERROR_MESSAGE.format(class_name=class_name, key=key)
+            raise AssertionError(msg)
 
 
 class BooleanField(Field):
-    error_messages = {
+    MESSAGES = {
         'required': 'This field is required.',
         'invalid_value': '`{input}` is not a valid boolean.'
     }
@@ -230,7 +278,7 @@ class BooleanField(Field):
 
 
 class CharField(Field):
-    error_messages = {
+    MESSAGES = {
         'required': 'This field is required.',
         'blank': 'This field may not be blank.'
     }
@@ -246,7 +294,7 @@ class CharField(Field):
 
 
 class ChoiceField(Field):
-    error_messages = {
+    MESSAGES = {
         'required': 'This field is required.',
         'invalid_choice': '`{input}` is not a valid choice.'
     }
@@ -286,7 +334,7 @@ class ChoiceField(Field):
 
 
 class MultipleChoiceField(ChoiceField):
-    error_messages = {
+    MESSAGES = {
         'required': 'This field is required.',
         'invalid_choice': '`{input}` is not a valid choice.',
         'not_a_list': 'Expected a list of items but got type `{input_type}`'
@@ -302,7 +350,7 @@ class MultipleChoiceField(ChoiceField):
 
 
 class IntegerField(Field):
-    error_messages = {
+    MESSAGES = {
         'required': 'This field is required.',
         'invalid_integer': 'A valid integer is required.'
     }
@@ -314,8 +362,6 @@ class IntegerField(Field):
             self.fail('invalid_integer')
         return data
 
-
-### Complex field classes
 
 class MethodField(Field):
     def __init__(self, **kwargs):

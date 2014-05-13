@@ -3,6 +3,7 @@ dist/
 htmlcov/
 site/
 .tox/
+.cache/
 *.egg-info/
 *.pyc
 __pycache__

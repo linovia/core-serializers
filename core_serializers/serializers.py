@@ -114,8 +114,6 @@ class Serializer(Field):
             setattr(instance, key, value)
 
 
-
-
 class ListSerializer(Field):
     def __init__(self, child_serializer, partial=False, **kwargs):
         super(ListSerializer, self).__init__(**kwargs)
