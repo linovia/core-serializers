@@ -218,7 +218,7 @@ class Field(BaseField):
 class BooleanField(Field):
     error_messages = {
         'required': 'This field is required.',
-        'invalid_value': '`{input}` is not a valid boolean.',
+        'invalid_value': '`{input}` is not a valid boolean.'
     }
 
     def to_native(self, data):
@@ -248,14 +248,14 @@ class CharField(Field):
 class ChoiceField(Field):
     error_messages = {
         'required': 'This field is required.',
-        'invalid_choice': '`{input}` is not a valid choice.',
+        'invalid_choice': '`{input}` is not a valid choice.'
     }
     coerce_to_type = str
 
     def __init__(self, *args, **kwargs):
         choices = kwargs.pop('choices')
 
-        assert choices, '`choices` argument may not be empty'
+        assert choices, '`choices` argument is required and may not be empty'
 
         # Allow either single or paired choices style:
         # choices = [1, 2, 3]
@@ -289,14 +289,16 @@ class MultipleChoiceField(ChoiceField):
     error_messages = {
         'required': 'This field is required.',
         'invalid_choice': '`{input}` is not a valid choice.',
-        'invalid_type': 'Expected type `{expected_type}` but got type `{input_type}`.',
         'not_a_list': 'Expected a list of items but got type `{input_type}`'
     }
 
     def to_native(self, data):
         if not hasattr(data, '__iter__'):
             self.fail('not_a_list', input_type=type(data).__name__)
-        return set([super(MultipleChoiceField, self).to_native(item) for item in data])
+        return set([
+            super(MultipleChoiceField, self).to_native(item)
+            for item in data
+        ])
 
 
 class IntegerField(Field):
