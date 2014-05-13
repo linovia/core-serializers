@@ -10,9 +10,11 @@ class FormRenderer(object):
         if class_name == 'BooleanField':
             return 'checkbox.html'
         if class_name == 'CharField':
-            return 'text.html'
+            if field.style.get('type') == 'textarea':
+                return 'textarea.html'
+            return 'input.html'
         if class_name == 'IntegerField':
-            return 'text.html'
+            return 'input.html'
         if class_name == 'ChoiceField':
             if field.style.get('type') == 'radio':
                 return 'select_radio.html'
@@ -21,7 +23,7 @@ class FormRenderer(object):
             if field.style.get('type') == 'checkbox':
                 return 'select_checkbox.html'
             return 'select_multiple.html'
-        return 'text.html'
+        return 'input.html'
 
     def render(self, data, **options):
         ret = ''

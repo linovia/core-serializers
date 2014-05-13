@@ -38,13 +38,13 @@ class TestInput(HTMLFormsBaseCase):
     empty_html = """
         <div class="form-group">
             <label>Text input</label>
-            <input class="form-control" name="field_name">
+            <input type="text" class="form-control" name="field_name">
         </div>
     """
     populated_html = """
         <div class="form-group">
             <label>Text input</label>
-            <input class="form-control" name="field_name" value="example">
+            <input type="text" class="form-control" name="field_name" value="example">
         </div>
     """
 
