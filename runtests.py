@@ -7,13 +7,13 @@ import subprocess
 
 PYTEST_ARGS = {
     'default': ['tests', '--cov', 'core_serializers', '--cov', 'tests', '--cov-report', 'term', '--cov-report', 'html'],
-    'nocov': ['tests',],
+    'simple': ['tests', '-q'],
     'travis': ['tests', '--cov', 'core_serializers', '--cov', 'tests', '--cov-report', 'term', '-v']
 }
 
 FLAKE8_ARGS = {
     'default': ['core_serializers', 'tests', '--ignore=E501'],
-    'nocov': ['core_serializers', 'tests', '--ignore=E501'],
+    'simple': ['core_serializers', 'tests', '--ignore=E501'],
     'travis': ['core_serializers', 'tests', '--ignore=E501'],
 }
 
@@ -35,5 +35,4 @@ if __name__ == "__main__":
         style = 'default'
         custom_args = sys.argv[1:]
     exit_on_failure(pytest.main(PYTEST_ARGS[style] + custom_args))
-    if FLAKE8_ARGS[style] is not None:
-        exit_on_failure(flake8_main(FLAKE8_ARGS[style]))
+    exit_on_failure(flake8_main(FLAKE8_ARGS[style]))
