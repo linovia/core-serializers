@@ -89,6 +89,26 @@ class TestSelect(HTMLFormsBaseCase):
     """
 
 
+class TestMultipleSelect(HTMLFormsBaseCase):
+    base_field = fields.MultipleChoiceField(
+        choices=[(1, 'Option one'), (2, 'Option two')],
+        initial=[2]
+    )
+    populated_value = [1]
+    empty_html = """
+        <select multiple class="form-control" name="field_name">
+          <option value="1" >Option one</option>
+          <option value="2" selected>Option two</option>
+        </select>
+    """
+    populated_html = """
+        <select multiple class="form-control" name="field_name">
+          <option value="1" selected>Option one</option>
+          <option value="2" >Option two</option>
+        </select>
+    """
+
+
 class TestRadio(HTMLFormsBaseCase):
     base_field = fields.ChoiceField(
         choices=[(1, 'Option one'), (2, 'Option two')],
@@ -97,30 +117,30 @@ class TestRadio(HTMLFormsBaseCase):
     )
     populated_value = 1
     empty_html = """
-    <div class="radio">
-        <label>
-            <input type="radio" name="field_name" value="1" >
-            Option one
-        </label>
-    </div>
-    <div class="radio">
-        <label>
-            <input type="radio" name="field_name" value="2" checked>
-            Option two
-        </label>
-    </div>
+        <div class="radio">
+            <label >
+                <input type="radio" name="field_name" value="1" >
+                Option one
+            </label>
+        </div>
+        <div class="radio">
+            <label >
+                <input type="radio" name="field_name" value="2" checked>
+                Option two
+            </label>
+        </div>
     """
     populated_html = """
-    <div class="radio">
-        <label>
-            <input type="radio" name="field_name" value="1" checked>
-            Option one
-        </label>
-    </div>
-    <div class="radio">
-        <label>
-            <input type="radio" name="field_name" value="2" >
-            Option two
-        </label>
-    </div>
+        <div class="radio">
+            <label >
+                <input type="radio" name="field_name" value="1" checked>
+                Option one
+            </label>
+        </div>
+        <div class="radio">
+            <label >
+                <input type="radio" name="field_name" value="2" >
+                Option two
+            </label>
+        </div>
     """

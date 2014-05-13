@@ -1,6 +1,6 @@
 {% for key, text in field.choices.items() %}
 <div class="radio">
-    <label>
+    <label {% if field.style.inline %}class="radio-inline"{% endif %}>
         <input type="radio" name="{{ field.field_name }}" value="{{ key }}" {% if key==value %}checked{% endif %}>
         {{ text }}
     </label>

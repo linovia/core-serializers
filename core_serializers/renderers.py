@@ -15,8 +15,12 @@ class FormRenderer(object):
             return 'text.html'
         if class_name == 'ChoiceField':
             if field.style.get('type') == 'radio':
-                return 'radio.html'
+                return 'select_radio.html'
             return 'select.html'
+        if class_name == 'MultipleChoiceField':
+            if field.style.get('type') == 'checkbox':
+                return 'select_checkbox.html'
+            return 'select_multiple.html'
         return 'text.html'
 
     def render(self, data, **options):
