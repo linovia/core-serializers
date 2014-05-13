@@ -94,7 +94,7 @@ class TestMultipleSelect(HTMLFormsBaseCase):
         choices=[(1, 'Option one'), (2, 'Option two')],
         initial=[2]
     )
-    populated_value = [1]
+    populated_value = [1, 2]
     empty_html = """
         <select multiple class="form-control" name="field_name">
           <option value="1" >Option one</option>
@@ -104,7 +104,7 @@ class TestMultipleSelect(HTMLFormsBaseCase):
     populated_html = """
         <select multiple class="form-control" name="field_name">
           <option value="1" selected>Option one</option>
-          <option value="2" >Option two</option>
+          <option value="2" selected>Option two</option>
         </select>
     """
 
@@ -140,6 +140,42 @@ class TestRadio(HTMLFormsBaseCase):
         <div class="radio">
             <label >
                 <input type="radio" name="field_name" value="2" >
+                Option two
+            </label>
+        </div>
+    """
+
+class TestMultipleCheckbox(HTMLFormsBaseCase):
+    base_field = fields.MultipleChoiceField(
+        choices=[(1, 'Option one'), (2, 'Option two')],
+        initial=[2],
+        style={'type': 'checkbox'}
+    )
+    populated_value = [1, 2]
+    empty_html = """
+        <div class="checkbox">
+            <label >
+                <input type="checkbox" name="field_name" value="1" >
+                Option one
+            </label>
+        </div>
+        <div class="checkbox">
+            <label >
+                <input type="checkbox" name="field_name" value="2" checked>
+                Option two
+            </label>
+        </div>
+    """
+    populated_html = """
+        <div class="checkbox">
+            <label >
+                <input type="checkbox" name="field_name" value="1" checked>
+                Option one
+            </label>
+        </div>
+        <div class="checkbox">
+            <label >
+                <input type="checkbox" name="field_name" value="2" checked>
                 Option two
             </label>
         </div>
