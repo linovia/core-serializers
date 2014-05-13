@@ -1,4 +1,5 @@
-from core_serializers import serializers, fields, BasicObject, MultiDict
+from core_serializers import serializers, fields, BasicObject
+from werkzeug import MultiDict
 
 
 class TestListSerializer:

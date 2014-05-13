@@ -1,7 +1,7 @@
 from collections import OrderedDict
 from core_serializers.fields import ValidationError, Field, empty
 from core_serializers.utils import (
-    BasicObject, FieldDict, MultiDict, parse_html_dict, parse_html_list
+    BasicObject, FieldDict, parse_html_dict, parse_html_list
 )
 import copy
 
@@ -62,7 +62,7 @@ class Serializer(Field):
     def get_primitive_value(self, dictionary):
         # We override the default field access in order to support
         # nested HTML forms.
-        if isinstance(dictionary, MultiDict):
+        if hasattr(dictionary, 'getlist'):
             return parse_html_dict(dictionary, prefix=self.field_name)
         return dictionary.get(self.field_name, empty)
 
@@ -132,7 +132,7 @@ class ListSerializer(Field):
     def get_primitive_value(self, dictionary):
         # We override the default field access in order to support
         # lists in HTML forms.
-        if isinstance(dictionary, MultiDict):
+        if hasattr(dictionary, 'getlist'):
             return parse_html_list(dictionary, prefix=self.field_name)
         return dictionary.get(self.field_name, empty)
 
@@ -140,7 +140,7 @@ class ListSerializer(Field):
         """
         List of dicts of native values <- List of dicts of primitive datatypes.
         """
-        if isinstance(data, MultiDict):
+        if hasattr(data, 'getlist'):
             data = parse_html_list(data)
 
         # TODO: Skip empty returned results?
