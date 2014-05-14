@@ -59,13 +59,13 @@ class TestTextArea(HTMLFormsBaseCase):
     empty_html = """
         <div class="form-group">
             <label>Textarea</label>
-            <textarea class="form-control" name="field_name" rows=5>
+            <textarea class="form-control" name="field_name" rows=5></textarea>
         </div>
     """
     populated_html = """
         <div class="form-group">
             <label>Textarea</label>
-            <textarea class="form-control" name="field_name" value="longer example text" rows=5>
+            <textarea class="form-control" name="field_name" rows=5>longer example text</textarea>
         </div>
     """
 
