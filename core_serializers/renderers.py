@@ -1,8 +1,10 @@
 from jinja2 import Environment, PackageLoader
+import json
+
 env = Environment(loader=PackageLoader('core_serializers', 'templates'))
 
 
-class FormRenderer(object):
+class FormRenderer:
     def get_template_name(self, field):
         class_name = field.__class__.__name__
         if getattr(field, 'read_only', False):
@@ -32,3 +34,14 @@ class FormRenderer(object):
             template = env.get_template(template_name)
             ret += template.render(value=value, field=field) + '\n'
         return ret
+
+
+class JSONRenderer:
+    indent = None
+
+    def __init__(self, indent=None):
+        self.indent = indent if indent is not None else self.indent
+
+    def render(self, data, **options):
+        indent = options.get('indent', self.indent)
+        return json.dumps(data, indent=indent)
