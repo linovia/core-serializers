@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from core_serializers.fields import ValidationError, Field, empty
+from core_serializers.fields import ValidationError, BaseField, Field, empty
 from core_serializers.utils import (
     BasicObject, FieldDict, parse_html_dict, parse_html_list
 )
@@ -18,7 +18,7 @@ class SerializerMetaclass(type):
     def _get_fields(cls, bases, attrs):
         fields = [(field_name, attrs.pop(field_name))
                   for field_name, obj in attrs.items()
-                  if isinstance(obj, Field)]
+                  if isinstance(obj, BaseField)]
         fields.sort(key=lambda x: x[1]._creation_counter)
 
         # If this class is subclassing another Serializer, add that Serializer's

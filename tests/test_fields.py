@@ -3,6 +3,45 @@ from core_serializers.utils import BasicObject
 import pytest
 
 
+class TestBaseField:
+    def setup(self):
+        self.field = fields.BaseField()
+
+    def test_validate(self):
+        """
+        By default a field should simply return the data it validates.
+        """
+        assert self.field.validate(123) == 123
+
+    def test_serialize(self):
+        """
+        By default a field should simply return the data it serializes.
+        """
+        assert self.field.serialize(123) == 123
+
+
+class TestBaseFieldUsedInSerializer:
+    def setup(self):
+        class TestSerializer(serializers.Serializer):
+            field = fields.BaseField()
+        self.serializer = TestSerializer()
+
+    def test_validate(self):
+        """
+        By default the base field should simply return the data it validates.
+        """
+        data = {'field': 123}
+        assert self.serializer.validate(data) == data
+
+    def test_serialize(self):
+        """
+        By default a base field should simply return the data it serializes.
+        """
+        obj = BasicObject(field=123)
+        expected = {'field': 123}
+        assert self.serializer.serialize(obj) == expected
+
+
 class TestField:
     def setup(self):
         self.field = fields.Field()

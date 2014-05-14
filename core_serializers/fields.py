@@ -14,7 +14,7 @@ class ValidationError(Exception):
 
 class BaseField(object):
     """
-    This class is provided as the miminal field interface.
+    This class is provided as a miminal field interface.
 
     It does not include any of the configuration options made available
     by the `Field` class, but may be overridden to provide for custom
@@ -140,9 +140,7 @@ class Field(BaseField):
         """
         Setup the context for the field instance.
         """
-        self.field_name = field_name
-        self.parent = parent
-        self.root = root
+        super(Field, self).setup(field_name, parent, root)
         if self.source is None:
             self.source = field_name
         if getattr(root, 'partial', False):
