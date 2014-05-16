@@ -272,7 +272,7 @@ class BooleanField(Field):
         'invalid_value': '`{input}` is not a valid boolean.'
     }
 
-    def get_primitive_value(self, dictionary): 
+    def get_primitive_value(self, dictionary):
         if is_html_input(dictionary):
             # HTML forms do not send a `False` value on an empty checkbox,
             # so we override the default empty value to be False.
