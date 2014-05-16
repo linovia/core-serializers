@@ -1,6 +1,7 @@
 from core_serializers import fields, renderers, serializers
 from core_serializers.utils import BasicObject
 import copy
+import re
 
 
 def strip(text):
@@ -8,6 +9,8 @@ def strip(text):
     Strip leading and trailing whitespace from every line in a string, and
     ignore blank lines. Used for neater whitespace-ignoring comparisons.
     """
+    text = re.sub(' +', ' ', text)
+    text = re.sub(' >', '>', text)
     lines = text.strip().splitlines()
     return '\n'.join([line.strip() for line in lines if line.strip()])
 
@@ -50,6 +53,25 @@ class TestInput(HTMLFormsBaseCase):
     """
 
 
+class TestInteger(HTMLFormsBaseCase):
+    base_field = fields.IntegerField(
+        label='Text input'
+    )
+    populated_value = 'example'
+    empty_html = """
+        <div class="form-group">
+            <label>Text input</label>
+            <input type="number" class="form-control" name="field_name">
+        </div>
+    """
+    populated_html = """
+        <div class="form-group">
+            <label>Text input</label>
+            <input type="number" class="form-control" name="field_name" value="example">
+        </div>
+    """
+
+
 class TestTextArea(HTMLFormsBaseCase):
     base_field = fields.CharField(
         label='Textarea',
@@ -59,13 +81,13 @@ class TestTextArea(HTMLFormsBaseCase):
     empty_html = """
         <div class="form-group">
             <label>Textarea</label>
-            <textarea class="form-control" name="field_name" rows=5></textarea>
+            <textarea class="form-control" name="field_name" rows="5"></textarea>
         </div>
     """
     populated_html = """
         <div class="form-group">
             <label>Textarea</label>
-            <textarea class="form-control" name="field_name" rows=5>longer example text</textarea>
+            <textarea class="form-control" name="field_name" rows="5">longer example text</textarea>
         </div>
     """
 
@@ -100,16 +122,22 @@ class TestSelect(HTMLFormsBaseCase):
     )
     populated_value = 1
     empty_html = """
-        <select class="form-control" name="field_name">
-          <option value="1" >Option one</option>
-          <option value="2" selected>Option two</option>
-        </select>
+        <div class="form-group">
+            <label>Field name</label>
+            <select class="form-control" name="field_name">
+                <option value="1" >Option one</option>
+                <option value="2" selected>Option two</option>
+            </select>
+        </div>
     """
     populated_html = """
-        <select class="form-control" name="field_name">
-          <option value="1" selected>Option one</option>
-          <option value="2" >Option two</option>
-        </select>
+        <div class="form-group">
+            <label>Field name</label>
+            <select class="form-control" name="field_name">
+              <option value="1" selected>Option one</option>
+              <option value="2" >Option two</option>
+            </select>
+        </div>
     """
 
 
@@ -120,16 +148,22 @@ class TestMultipleSelect(HTMLFormsBaseCase):
     )
     populated_value = [1, 2]
     empty_html = """
-        <select multiple class="form-control" name="field_name">
-          <option value="1" >Option one</option>
-          <option value="2" selected>Option two</option>
-        </select>
+        <div class="form-group">
+            <label>Field name</label>
+            <select multiple class="form-control" name="field_name">
+              <option value="1" >Option one</option>
+              <option value="2" selected>Option two</option>
+            </select>
+        </div>
     """
     populated_html = """
-        <select multiple class="form-control" name="field_name">
-          <option value="1" selected>Option one</option>
-          <option value="2" selected>Option two</option>
-        </select>
+        <div class="form-group">
+            <label>Field name</label>
+            <select multiple class="form-control" name="field_name">
+                <option value="1" selected>Option one</option>
+                <option value="2" selected>Option two</option>
+            </select>
+        </div>
     """
 
 
@@ -141,31 +175,37 @@ class TestRadio(HTMLFormsBaseCase):
     )
     populated_value = 1
     empty_html = """
-        <div class="radio">
-            <label >
-                <input type="radio" name="field_name" value="1" >
-                Option one
-            </label>
-        </div>
-        <div class="radio">
-            <label >
-                <input type="radio" name="field_name" value="2" checked>
-                Option two
-            </label>
+        <div class="form-group">
+            <label>Field name</label>
+            <div class="radio">
+                <label>
+                    <input type="radio" name="field_name" value="1">
+                    Option one
+                </label>
+            </div>
+            <div class="radio">
+                <label >
+                    <input type="radio" name="field_name" value="2" checked>
+                    Option two
+                </label>
+            </div>
         </div>
     """
     populated_html = """
-        <div class="radio">
-            <label >
-                <input type="radio" name="field_name" value="1" checked>
-                Option one
-            </label>
-        </div>
-        <div class="radio">
-            <label >
-                <input type="radio" name="field_name" value="2" >
-                Option two
-            </label>
+        <div class="form-group">
+            <label>Field name</label>
+            <div class="radio">
+                <label>
+                    <input type="radio" name="field_name" value="1" checked>
+                    Option one
+                </label>
+            </div>
+            <div class="radio">
+                <label>
+                    <input type="radio" name="field_name" value="2">
+                    Option two
+                </label>
+            </div>
         </div>
     """
 
@@ -178,30 +218,36 @@ class TestMultipleCheckbox(HTMLFormsBaseCase):
     )
     populated_value = [1, 2]
     empty_html = """
-        <div class="checkbox">
-            <label >
-                <input type="checkbox" name="field_name" value="1" >
-                Option one
-            </label>
-        </div>
-        <div class="checkbox">
-            <label >
-                <input type="checkbox" name="field_name" value="2" checked>
-                Option two
-            </label>
+        <div class="form-group">
+            <label>Field name</label>
+            <div class="checkbox">
+                <label>
+                    <input type="checkbox" name="field_name" value="1" >
+                    Option one
+                </label>
+            </div>
+            <div class="checkbox">
+                <label >
+                    <input type="checkbox" name="field_name" value="2" checked>
+                    Option two
+                </label>
+            </div>
         </div>
     """
     populated_html = """
-        <div class="checkbox">
-            <label >
-                <input type="checkbox" name="field_name" value="1" checked>
-                Option one
-            </label>
-        </div>
-        <div class="checkbox">
-            <label >
-                <input type="checkbox" name="field_name" value="2" checked>
-                Option two
-            </label>
+        <div class="form-group">
+            <label>Field name</label>
+            <div class="checkbox">
+                <label>
+                    <input type="checkbox" name="field_name" value="1" checked>
+                    Option one
+                </label>
+            </div>
+            <div class="checkbox">
+                <label>
+                    <input type="checkbox" name="field_name" value="2" checked>
+                    Option two
+                </label>
+            </div>
         </div>
     """

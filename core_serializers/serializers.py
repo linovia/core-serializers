@@ -1,5 +1,7 @@
 from collections import OrderedDict
-from core_serializers.fields import ValidationError, BaseField, Field, empty
+from core_serializers.fields import (
+    ValidationError, BaseField, Field, empty, is_html_input
+)
 from core_serializers.utils import (
     BasicObject, FieldDict, parse_html_dict, parse_html_list
 )
@@ -37,7 +39,6 @@ class SerializerMetaclass(type):
 
 class Serializer(Field):
     __metaclass__ = SerializerMetaclass
-    dict_class = FieldDict
 
     def __init__(self, partial=False, **kwargs):
         super(Serializer, self).__init__(**kwargs)
@@ -62,7 +63,7 @@ class Serializer(Field):
     def get_primitive_value(self, dictionary):
         # We override the default field access in order to support
         # nested HTML forms.
-        if hasattr(dictionary, 'getlist'):
+        if is_html_input(dictionary):
             return parse_html_dict(dictionary, prefix=self.field_name)
         return dictionary.get(self.field_name, empty)
 
@@ -74,12 +75,13 @@ class Serializer(Field):
         errors = {}
 
         for field in self.fields.values():
+            primitive_value = field.get_primitive_value(data)
             try:
-                primitive_value = field.get_primitive_value(data)
                 native_value = field.validate(primitive_value)
-                field.set_native_value(ret, native_value)
             except ValidationError as exc:
                 errors[field.field_name] = str(exc)
+            else:
+                field.set_native_value(ret, native_value)
 
         if errors:
             raise ValidationError(errors)
@@ -89,7 +91,7 @@ class Serializer(Field):
         """
         Object instance -> Dict of primitive datatypes.
         """
-        ret = self.dict_class()
+        ret = FieldDict()
 
         for field in self.fields.values():
             native_value = field.get_native_value(instance)
@@ -119,7 +121,7 @@ class ListSerializer(Field):
         super(ListSerializer, self).__init__(**kwargs)
         self.child_serializer = child_serializer
         self.partial = partial
-        child_serializer.setup(None, self, self)
+        child_serializer.setup('', self, self)
 
     def setup(self, field_name, parent, root):
         # If the list is used as a field then it needs to provide
@@ -130,7 +132,7 @@ class ListSerializer(Field):
     def get_primitive_value(self, dictionary):
         # We override the default field access in order to support
         # lists in HTML forms.
-        if hasattr(dictionary, 'getlist'):
+        if is_html_input(dictionary):
             return parse_html_list(dictionary, prefix=self.field_name)
         return dictionary.get(self.field_name, empty)
 
@@ -138,7 +140,7 @@ class ListSerializer(Field):
         """
         List of dicts of native values <- List of dicts of primitive datatypes.
         """
-        if hasattr(data, 'getlist'):
+        if is_html_input(data):
             data = parse_html_list(data)
 
         # TODO: Skip empty returned results?

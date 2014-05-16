@@ -3,6 +3,14 @@ from core_serializers.utils import BasicObject
 import pytest
 
 
+class HTMLDict(dict):
+    """
+    A mock MultiDict that can be used for representing HTML input.
+    """
+    def getlist(self):
+        pass  # pragma: no cover
+
+
 class TestBaseField:
     def setup(self):
         self.field = fields.BaseField()
@@ -223,7 +231,21 @@ class TestUnboundAccess:
             assert str(exc_info.value) == expected
 
 
-# Tests for complex fields
+class TestBooleanHTMLInput:
+    def setup(self):
+        class TestSerializer(serializers.Serializer):
+            archived = fields.BooleanField()
+        self.serializer = TestSerializer()
+
+    def test_empty_html_checkbox(self):
+        """
+        HTML checkboxes do not send any value, but should be treated
+        as `False` by BooleanField.
+        """
+        data = HTMLDict()
+        validated = self.serializer.validate(data)
+        assert validated == {'archived': False}
+
 
 class TestMethodField:
     def setup(self):

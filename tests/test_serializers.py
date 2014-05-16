@@ -57,10 +57,13 @@ class TestSerializerWithTypedFields:
             'b': '1',
             'c': 'true',
         }
+        expected = {
+            'a': 'abc',
+            'b': 1,
+            'c': True
+        }
         validated = self.serializer.validate(data)
-        assert validated['a'] == 'abc'
-        assert validated['b'] == 1
-        assert validated['c']
+        assert validated == expected
 
 
 def test_nested_serializer_not_required():

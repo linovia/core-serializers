@@ -1,0 +1,4 @@
+<div class="form-group">
+    {% include "fields/label.html" %}
+    <textarea class="form-control" {% include "fields/attrs.html" %}>{% if value %}{{ value }}{% endif %}</textarea>
+</div>

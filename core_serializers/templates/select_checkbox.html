@@ -1,8 +1,0 @@
-{% for key, text in field.choices.items() %}
-<div class="checkbox">
-    <label {% if field.style.inline %}class="checkbox-inline"{% endif %}>
-        <input type="checkbox" name="{{ field.field_name }}" value="{{ key }}" {% if key in value %}checked{% endif %}>
-        {{ text }}
-    </label>
-</div>
-{% endfor %}

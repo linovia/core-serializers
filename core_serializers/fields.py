@@ -12,6 +12,12 @@ class ValidationError(Exception):
     pass
 
 
+def is_html_input(dictionary):
+    # MultiDict type datastructures are used to represent HTML form input,
+    # which may have more than one value for each key.
+    return hasattr(dictionary, 'getlist')
+
+
 class BaseField(object):
     """
     This class is provided as a miminal field interface.
@@ -141,6 +147,8 @@ class Field(BaseField):
         Setup the context for the field instance.
         """
         super(Field, self).setup(field_name, parent, root)
+        if self.label is None:
+            self.label = self.field_name.replace('_', ' ').capitalize()
         if self.source is None:
             self.source = field_name
         if getattr(root, 'partial', False):
@@ -195,10 +203,7 @@ class Field(BaseField):
     def set_primitive_value(self, dictionary, value=empty):
         if value is empty:
             return
-        if hasattr(dictionary, 'set_field_item'):
-            dictionary.set_field_item(self.field_name, value, field=self)
-        else:
-            dictionary[self.field_name] = value
+        dictionary.set_field_item(self.field_name, value, field=self)
 
     def get_default(self):
         """
@@ -266,6 +271,13 @@ class BooleanField(Field):
         'required': 'This field is required.',
         'invalid_value': '`{input}` is not a valid boolean.'
     }
+
+    def get_primitive_value(self, dictionary): 
+        if is_html_input(dictionary):
+            # HTML forms do not send a `False` value on an empty checkbox,
+            # so we override the default empty value to be False.
+            return dictionary.get(self.field_name, False)
+        return dictionary.get(self.field_name, empty)
 
     def to_native(self, data):
         if data in ('true', 't', 'True', '1', 1, True):
