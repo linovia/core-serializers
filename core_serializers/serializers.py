@@ -117,10 +117,9 @@ class Serializer(Field):
 
 
 class ListSerializer(Field):
-    def __init__(self, child_serializer, partial=False, **kwargs):
+    def __init__(self, child_serializer, **kwargs):
         super(ListSerializer, self).__init__(**kwargs)
         self.child_serializer = child_serializer
-        self.partial = partial
         child_serializer.setup('', self, self)
 
     def setup(self, field_name, parent, root):

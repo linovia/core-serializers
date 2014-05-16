@@ -151,8 +151,6 @@ class Field(BaseField):
             self.label = self.field_name.replace('_', ' ').capitalize()
         if self.source is None:
             self.source = field_name
-        if getattr(root, 'partial', False):
-            self.required = False
 
     def get_primitive_value(self, dictionary):
         return dictionary.get(self.field_name, empty)
