@@ -5,12 +5,7 @@ env = Environment(loader=PackageLoader('core_serializers', 'templates'))
 
 
 class FormRenderer:
-    layout = 'vertical'
-
-    def __init__(self, layout=None):
-        self.layout = self.layout if (layout is None) else layout
-
-    def get_template_name(self, field):
+    def render_field(self, value, field):
         class_name = field.__class__.__name__
 
         context = {}
@@ -39,15 +34,14 @@ class FormRenderer:
                 base = 'input.html'
                 context = {'input_type': 'text'}
 
-        return ('fields/vertical/' + base, context)
+        template_name = 'fields/vertical/' + base
+        template = env.get_template(template_name)
+        return template.render(value=value, field=field, **context)
 
     def render(self, data, **options):
-        layout = options.get('layout', self.layout)
         ret = ''
         for key, value, field in data.field_items():
-            template_name, context = self.get_template_name(field)
-            template = env.get_template(template_name)
-            ret += template.render(value=value, field=field, layout=layout, **context) + '\n'
+            ret += self.render_field(value, field)
         return ret
 
 
