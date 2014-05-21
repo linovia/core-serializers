@@ -30,7 +30,7 @@ class FieldDict(OrderedDict):
 
     def __init__(self, serializer):
         super(FieldDict, self).__init__()
-        self._fields = {}
+        self.field_items = OrderedDict()
         self.serializer = serializer
 
     def set_field_item(self, key, value, field):
@@ -38,14 +38,7 @@ class FieldDict(OrderedDict):
         Sets a key-value pair, additionally storing the field used.
         """
         self[key] = value
-        self._fields[key] = field
-
-    def field_items(self):
-        """
-        Returns a three-tuple of (key, value, field) for each item.
-        """
-        for key, value in self.items():
-            yield key, value, self._fields[key]
+        self.field_items[key] = (field, value)
 
     def __repr__(self):
         return '<FieldDict %s>' % dict.__repr__(self)

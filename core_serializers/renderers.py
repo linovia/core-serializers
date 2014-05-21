@@ -7,7 +7,8 @@ env = Environment(loader=PackageLoader('core_serializers', 'templates'))
 class FormRenderer:
     template_name = 'form.html'
 
-    def render_field(self, value, field, **options):
+    def render_field(self, field_result, **options):
+        field, value = field_result
         class_name = field.__class__.__name__
         layout = options.get('layout', 'vertical')
 
@@ -37,13 +38,7 @@ class FormRenderer:
 
         template_name = 'fields/' + layout + '/' + base
         template = env.get_template(template_name)
-        return template.render(value=value, field=field, **context)
-
-    def render_fields(self, data, **options):
-        ret = ''
-        for key, value, field in data.field_items():
-            ret += self.render_field(value, field, **options) + '\n'
-        return ret
+        return template.render(field=field, value=value, **context)
 
     def render(self, data, **options):
         style = getattr(getattr(data.serializer, 'Meta', None), 'style', {})
