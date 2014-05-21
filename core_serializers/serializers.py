@@ -91,7 +91,7 @@ class Serializer(Field):
         """
         Object instance -> Dict of primitive datatypes.
         """
-        ret = FieldDict()
+        ret = FieldDict(serializer=self)
 
         for field in self.fields.values():
             native_value = field.get_native_value(instance)

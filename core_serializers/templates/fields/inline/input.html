@@ -1,0 +1,4 @@
+<div class="form-group">
+    {% include "fields/inline_label.html" %}
+    <input type="{{ input_type }}" class="form-control" {% include "fields/attrs.html" %} {% if value %}value="{{ value }}"{% endif %}>
+</div>

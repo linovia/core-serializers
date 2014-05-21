@@ -28,9 +28,10 @@ class FieldDict(OrderedDict):
     storing and retrieving the field instance that was used for each key.
     """
 
-    def __init__(self):
+    def __init__(self, serializer):
         super(FieldDict, self).__init__()
         self._fields = {}
+        self.serializer = serializer
 
     def set_field_item(self, key, value, field):
         """

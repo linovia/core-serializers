@@ -16,6 +16,13 @@ def strip(text):
 
 
 class HTMLFormsBaseCase:
+    form_template = """
+        <form role="form" action="" method="POST">
+        %s
+        <button type="submit" class="btn btn-default">Submit</button>
+        </form>
+    """
+
     def setup(self):
         class TestSerializer(serializers.Serializer):
             field_name = copy.copy(self.base_field)
@@ -25,13 +32,15 @@ class HTMLFormsBaseCase:
     def test_empty_form(self):
         empty = self.serializer.serialize()
         output = self.renderer.render(empty)
-        assert strip(output) == strip(self.empty_html)
+        expected = self.form_template % self.empty_html
+        assert strip(output) == strip(expected)
 
     def test_populated_form(self):
         obj = BasicObject(field_name=self.populated_value)
         populated = self.serializer.serialize(obj)
         output = self.renderer.render(populated)
-        assert strip(output) == strip(self.populated_html)
+        expected = self.form_template % self.populated_html
+        assert strip(output) == strip(expected)
 
 
 class TestInput(HTMLFormsBaseCase):

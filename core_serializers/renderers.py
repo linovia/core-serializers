@@ -5,13 +5,14 @@ env = Environment(loader=PackageLoader('core_serializers', 'templates'))
 
 
 class FormRenderer:
-    def render_field(self, value, field):
+    template_name = 'form.html'
+
+    def render_field(self, value, field, **options):
         class_name = field.__class__.__name__
+        layout = options.get('layout', 'vertical')
 
         context = {}
-        if getattr(field, 'read_only', False):
-            base = 'readonly.html'
-        elif class_name == 'BooleanField':
+        if class_name == 'BooleanField':
             base = 'checkbox.html'
         elif class_name == 'IntegerField':
             base = 'input.html'
@@ -28,21 +29,27 @@ class FormRenderer:
                 base = 'select_multiple.html'
         else:
             # CharField, and anything unknown
-            if field.style.get('type') == 'textarea':
+            if field.style.get('type') == 'textarea' and layout != 'inline':
                 base = 'textarea.html'
             else:
                 base = 'input.html'
                 context = {'input_type': 'text'}
 
-        template_name = 'fields/vertical/' + base
+        template_name = 'fields/' + layout + '/' + base
         template = env.get_template(template_name)
         return template.render(value=value, field=field, **context)
 
-    def render(self, data, **options):
+    def render_fields(self, data, **options):
         ret = ''
         for key, value, field in data.field_items():
-            ret += self.render_field(value, field)
+            ret += self.render_field(value, field, **options) + '\n'
         return ret
+
+    def render(self, data, **options):
+        style = getattr(getattr(data.serializer, 'Meta', None), 'style', {})
+        layout = style.get('layout', 'vertical')
+        template = env.get_template(self.template_name)
+        return template.render(data=data, renderer=self, layout=layout)
 
 
 class JSONRenderer:

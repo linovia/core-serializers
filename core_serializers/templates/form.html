@@ -1,0 +1,12 @@
+<form {% if layout=="inline" %}class="form-inline"{% elif layout=="horizontal" %}class="form-horizontal"{% endif %} role="form" action="" method="POST">
+    {{ renderer.render_fields(data, layout=layout) }}
+    {% if layout=="horizontal" %}
+        <div class="form-group">
+            <div class="col-sm-offset-2 col-sm-10">
+                <button type="submit" class="btn btn-default">Submit</button>
+            </div>
+        </div>
+    {% else %}
+        <button type="submit" class="btn btn-default">Submit</button>
+    {% endif %}
+</form>
