@@ -60,6 +60,9 @@ class Serializer(Field):
         for field_name, field in self.fields.items():
             field.setup(field_name, self, root)
 
+    def get_initial(self):
+        return empty
+
     def get_primitive_value(self, dictionary):
         # We override the default field access in order to support
         # nested HTML forms.

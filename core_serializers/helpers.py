@@ -6,6 +6,7 @@ def render_form(data, **options):
     renderer = FormRenderer()
     return Markup(renderer.render(data, **options))
 
+
 def render_field(field_item, **options):
     renderer = FormRenderer()
     return Markup(renderer.render_field(field_item, **options))

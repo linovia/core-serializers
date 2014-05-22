@@ -78,3 +78,12 @@ class TestListSerializer:
             }
         }
         assert self.serializer.validate(input_data) == expected_data
+
+    def test_nested_serialize_empty(self):
+        expected_data = {
+            'nested': {
+                'one': None,
+                'two': None
+            }
+        }
+        assert self.serializer.serialize() == expected_data
