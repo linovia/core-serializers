@@ -18,93 +18,9 @@ def is_html_input(dictionary):
     return hasattr(dictionary, 'getlist')
 
 
-class BaseField(object):
-    """
-    This class is provided as a miminal field interface.
-
-    It does not include any of the configuration options made available
-    by the `Field` class, but may be overridden to provide for custom
-    field behavior.
-    """
+class Field(object):
     _creation_counter = 0
 
-    _UNBOUND_FIELD = (
-        'Cannot access attribute `{attr}` on field `{class_name}`. '
-        'The field has not yet been bound to a serializer.'
-    )
-
-    def __init__(self):
-        # The creation counter is required so that the serializer metaclass
-        # can determine the ordering of the fields on the class.
-        self._creation_counter = Field._creation_counter
-        BaseField._creation_counter += 1
-
-    def setup(self, field_name, parent, root):
-        self.field_name = field_name
-        self.parent = parent
-        self.root = root
-
-    def get_primitive_value(self, dictionary):
-        return dictionary.get(self.field_name)
-
-    def set_native_value(self, dictionary, value):
-        dictionary[self.field_name] = value
-
-    def get_native_value(self, instance):
-        return getattr(instance, self.field_name)
-
-    def set_primitive_value(self, dictionary, value):
-        dictionary[self.field_name] = value
-
-    def validate(self, data):
-        return data
-
-    def serialize(self, value):
-        return value
-
-    # We protect `field_name`, `parent` and `root` attributes with accessors
-    # that ensure the user gets a helpful traceback if attempting to call
-    # methods on an unbound field.
-
-    def get_field_name(self):
-        try:
-            return self._field_name
-        except AttributeError:
-            class_name = self.__class__.__name__
-            msg = self._UNBOUND_FIELD.format(class_name=class_name, attr='field_name')
-            raise AssertionError(msg)
-
-    def get_parent(self):
-        try:
-            return self._parent
-        except AttributeError:
-            class_name = self.__class__.__name__
-            msg = self._UNBOUND_FIELD.format(class_name=class_name, attr='parent')
-            raise AssertionError(msg)
-
-    def get_root(self):
-        try:
-            return self._root
-        except AttributeError:
-            class_name = self.__class__.__name__
-            msg = self._UNBOUND_FIELD.format(class_name=class_name, attr='root')
-            raise AssertionError(msg)
-
-    def set_field_name(self, value):
-        self._field_name = value
-
-    def set_parent(self, value):
-        self._parent = value
-
-    def set_root(self, value):
-        self._root = value
-
-    field_name = property(get_field_name, set_field_name)
-    parent = property(get_parent, set_parent)
-    root = property(get_root, set_root)
-
-
-class Field(BaseField):
     MESSAGES = {
         'required': 'This field is required.'
     }
@@ -121,7 +37,8 @@ class Field(BaseField):
     def __init__(self, read_only=False, write_only=False,
                  required=None, default=empty, initial=None, source=None,
                  label=None, style=None):
-        super(Field, self).__init__()
+        self._creation_counter = Field._creation_counter
+        Field._creation_counter += 1
 
         # If `required` is unset, then use `True` unless a default is provided.
         if required is None:
@@ -146,7 +63,9 @@ class Field(BaseField):
         """
         Setup the context for the field instance.
         """
-        super(Field, self).setup(field_name, parent, root)
+        self.field_name = field_name
+        self.parent = parent
+        self.root = root
         if self.label is None:
             self.label = self.field_name.replace('_', ' ').capitalize()
         if self.source is None:
@@ -198,11 +117,6 @@ class Field(BaseField):
 
         return getattr(instance, key)
 
-    def set_primitive_value(self, dictionary, value=empty):
-        if value is empty:
-            return
-        dictionary.set_field_item(self.field_name, value, field=self)
-
     def get_default(self):
         """
         Return the default value to use when validating data if no input
@@ -233,27 +147,17 @@ class Field(BaseField):
             return self.get_default()
         return self.to_native(data)
 
-    def serialize(self, value=empty):
+    def serialize(self, value):
         """
         Serialize an internal value and return the simple representation.
-
-        May return `empty` if the field should not be serialized.
         """
-        if self.write_only:
-            return empty
-        return self.to_primitive(value)
+        return value
 
     def to_native(self, data):
         """
         native value <- primitive datatype.
         """
         return data
-
-    def to_primitive(self, value):
-        """
-        native value -> primitive datatype.
-        """
-        return value
 
     def fail(self, key, **kwargs):
         try:
@@ -262,6 +166,14 @@ class Field(BaseField):
             class_name = self.__class__.__name__
             msg = self._MISSING_ERROR_MESSAGE.format(class_name=class_name, key=key)
             raise AssertionError(msg)
+
+    def __getattr__(self, attr):
+        if attr in ('field_name', 'parent', 'root'):
+            raise AssertionError(
+                'Cannot access attribute `%s` on field `IntegerField`. '
+                'The field has not yet been bound to a serializer.' % attr
+            )
+        return super(Field, self).__getattr__(attr)
 
 
 class BooleanField(Field):

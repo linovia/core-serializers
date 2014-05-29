@@ -1,4 +1,4 @@
-from collections import OrderedDict
+from collections import OrderedDict, namedtuple
 import re
 
 
@@ -22,26 +22,51 @@ class BasicObject(object):
         return self.__dict__ == other.__dict__
 
 
-class FieldDict(OrderedDict):
+FieldResult = namedtuple('FieldResult', ['field', 'value', 'error'])
+
+
+class FieldResultsDict(OrderedDict):
     """
-    A dictionary class that can additionally presents an interface for
+    A dictionary class that additionally presents an interface for
     storing and retrieving the field instance that was used for each key.
     """
 
     def __init__(self, serializer):
-        super(FieldDict, self).__init__()
-        self.field_items = OrderedDict()
+        super(FieldResultsDict, self).__init__()
+        self.field_results = []
         self.serializer = serializer
 
-    def set_field_item(self, key, value, field):
+    def set_result(self, field, value, error=None):
         """
         Sets a key-value pair, additionally storing the field used.
         """
-        self[key] = value
-        self.field_items[key] = (field, value)
+        self[field.field_name] = value
+        self.field_results.append(FieldResult(field, value, error))
 
     def __repr__(self):
-        return '<FieldDict %s>' % dict.__repr__(self)
+        return '<FieldResultsDict %s>' % dict.__repr__(self)
+
+
+class ErrorResultsDict(OrderedDict):
+    """
+    A dictionary class that additionally presents an interface for
+    storing and retrieving the field instance that was used for each key.
+    """
+
+    def __init__(self, serializer):
+        super(ErrorResultsDict, self).__init__()
+        self.field_results = []
+        self.serializer = serializer
+
+    def set_result(self, field, value, error=None):
+        """
+        Sets a key-value pair, additionally storing the field used.
+        """
+        self[field.field_name] = error
+        self.field_results.append(FieldResult(field, value, error))
+
+    def __repr__(self):
+        return '<ErrorResultsDict %s>' % dict.__repr__(self)
 
 
 def parse_html_list(dictionary, prefix=''):

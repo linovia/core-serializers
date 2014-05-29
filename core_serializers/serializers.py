@@ -1,9 +1,9 @@
 from collections import OrderedDict
 from core_serializers.fields import (
-    ValidationError, BaseField, Field, empty, is_html_input
+    ValidationError, Field, empty, is_html_input
 )
 from core_serializers.utils import (
-    BasicObject, FieldDict, parse_html_dict, parse_html_list
+    BasicObject, ErrorResultsDict, FieldResultsDict, parse_html_dict, parse_html_list
 )
 import copy
 
@@ -20,7 +20,7 @@ class SerializerMetaclass(type):
     def _get_fields(cls, bases, attrs):
         fields = [(field_name, attrs.pop(field_name))
                   for field_name, obj in attrs.items()
-                  if isinstance(obj, BaseField)]
+                  if isinstance(obj, Field)]
         fields.sort(key=lambda x: x[1]._creation_counter)
 
         # If this class is subclassing another Serializer, add that Serializer's
@@ -75,14 +75,14 @@ class Serializer(Field):
         Dict of native values <- Dict of primitive datatypes.
         """
         ret = {}
-        errors = {}
+        errors = ErrorResultsDict(serializer=self)
 
         for field in self.fields.values():
             primitive_value = field.get_primitive_value(data)
             try:
                 native_value = field.validate(primitive_value)
             except ValidationError as exc:
-                errors[field.field_name] = str(exc)
+                errors.set_result(field, primitive_value, str(exc))
             else:
                 field.set_native_value(ret, native_value)
 
@@ -90,16 +90,18 @@ class Serializer(Field):
             raise ValidationError(errors)
         return ret
 
-    def to_primitive(self, instance):
+    def serialize(self, instance=empty):
         """
         Object instance -> Dict of primitive datatypes.
         """
-        ret = FieldDict(serializer=self)
+        ret = FieldResultsDict(serializer=self)
 
         for field in self.fields.values():
             native_value = field.get_native_value(instance)
+            if field.write_only:
+                continue
             primitive_value = field.serialize(native_value)
-            field.set_primitive_value(ret, primitive_value)
+            ret.set_result(field, primitive_value)
 
         return ret
 
@@ -154,7 +156,7 @@ class ListSerializer(Field):
 
         return ret
 
-    def to_primitive(self, data):
+    def serialize(self, data):
         """
         List of object instances -> List of dicts of primitive datatypes.
         """

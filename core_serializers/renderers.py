@@ -8,7 +8,7 @@ class FormRenderer:
     template_name = 'form.html'
 
     def render_field(self, field_result, **options):
-        field, value = field_result
+        field, value, error = field_result
         class_name = field.__class__.__name__
         layout = options.get('layout', 'vertical')
 

@@ -1,6 +1,6 @@
 <form {% if layout=="inline" %}class="form-inline"{% elif layout=="horizontal" %}class="form-horizontal"{% endif %} role="form" action="" method="POST">
-    {% for field_item in data.field_items.values() %}
-        {{ renderer.render_field(field_item, layout=layout) }}
+    {% for field_result in data.field_results %}
+        {{ renderer.render_field(field_result, layout=layout) }}
     {% endfor %}
     {% if layout=="horizontal" %}
         <div class="form-group">
