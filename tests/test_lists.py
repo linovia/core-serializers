@@ -10,7 +10,7 @@ class TestListSerializer:
     """
 
     def setup(self):
-        self.serializer = serializers.ListSerializer(fields.IntegerField())
+        self.serializer = serializers.ListSerializer(child=fields.IntegerField())
 
     def test_validate(self):
         """

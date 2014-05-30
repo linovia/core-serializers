@@ -1,11 +1,14 @@
-from collections import OrderedDict
+from collections import OrderedDict, namedtuple
 from core_serializers.fields import (
     ValidationError, Field, empty, is_html_input
 )
 from core_serializers.utils import (
-    BasicObject, ErrorResultsDict, FieldResultsDict, parse_html_dict, parse_html_list
+    BasicObject, parse_html_dict, parse_html_list
 )
 import copy
+
+
+FieldResult = namedtuple('FieldResult', ['field', 'value', 'error'])
 
 
 class SerializerMetaclass(type):
@@ -40,9 +43,13 @@ class SerializerMetaclass(type):
 class Serializer(Field):
     __metaclass__ = SerializerMetaclass
 
-    def __init__(self, partial=False, **kwargs):
+    def __init__(self, instance=None, data=None, partial=False, **kwargs):
         super(Serializer, self).__init__(**kwargs)
+        self.instance = instance
+        self.initial_data = data
         self.partial = partial
+
+        self.validated_data, self.errors = (None, None)
 
         # Every new serializer is created with a clone of the field instances.
         # This allows users to dynamically modify the fields on a serializer
@@ -63,7 +70,7 @@ class Serializer(Field):
     def get_initial(self):
         return empty
 
-    def get_primitive_value(self, dictionary):
+    def get_value(self, dictionary):
         # We override the default field access in order to support
         # nested HTML forms.
         if is_html_input(dictionary):
@@ -75,65 +82,93 @@ class Serializer(Field):
         Dict of native values <- Dict of primitive datatypes.
         """
         ret = {}
-        errors = ErrorResultsDict(serializer=self)
+        errors = {}
 
         for field in self.fields.values():
-            primitive_value = field.get_primitive_value(data)
+            value = field.get_value(data)
             try:
-                native_value = field.validate(primitive_value)
+                validated_value = field.validate(value)
             except ValidationError as exc:
-                errors.set_result(field, primitive_value, str(exc))
+                errors[field.field_name] = str(exc)
             else:
-                field.set_native_value(ret, native_value)
+                field.set_native_value(ret, validated_value)
 
         if errors:
             raise ValidationError(errors)
+
         return ret
 
-    def serialize(self, instance=empty):
+    def serialize(self, instance):
         """
         Object instance -> Dict of primitive datatypes.
         """
-        ret = FieldResultsDict(serializer=self)
+        ret = OrderedDict()
 
         for field in self.fields.values():
             native_value = field.get_native_value(instance)
             if field.write_only:
                 continue
-            primitive_value = field.serialize(native_value)
-            ret.set_result(field, primitive_value)
+            ret[field.field_name] = field.serialize(native_value)
 
         return ret
 
-    def create(self, data):
-        """
-        Validate the given data and return an object instance.
-        """
-        data = self.validate(data)
-        return BasicObject(**data)
+    def is_valid(self):
+        try:
+            self.validated_data = self.validate(self.initial_data)
+        except ValidationError, exc:
+            self.validated_data = None
+            self.errors = exc.message
+            return False
+        self.errors = None
+        return True
 
-    def update(self, instance, data):
-        """
-        Validate the given data and use it to update an existing object instance.
-        """
-        data = self.validate(data)
-        for key, value in data.items():
+    def save(self):
+        if self.instance is not None:
+            self.update(self.instance, self.validated_data)
+        self.instance = self.create(self.validated_data)
+        return self.instance
+
+    def update(self, instance, attrs):
+        for key, value in attrs.items():
             setattr(instance, key, value)
+
+    def create(self, attrs):
+        return BasicObject(**attrs)
+
+    @property
+    def data(self):
+        if not hasattr(self, '_data'):
+            if self.instance is not None:
+                self._data = self.serialize(self.instance)
+            elif self.initial_data is not None:
+                self._data = {
+                    field_name: field.get_value(self.initial_data)
+                    for field_name, field in self.fields.items()
+                }
+            else:
+                self._data = self.serialize(empty)
+        return self._data
+
+    def __iter__(self):
+        for field in self.fields.values():
+            value = self.data.get(field.field_name) if self.data else None
+            error = self.errors.get(field.field_name) if self.errors else None
+            yield FieldResult(field, value, error)
 
 
 class ListSerializer(Field):
-    def __init__(self, child_serializer, **kwargs):
+    def __init__(self, child, **kwargs):
         super(ListSerializer, self).__init__(**kwargs)
-        self.child_serializer = child_serializer
-        child_serializer.setup('', self, self)
+        self.child = child
+        child.setup('', self, self)
 
     def setup(self, field_name, parent, root):
         # If the list is used as a field then it needs to provide
         # the current context to the child serializer.
         super(ListSerializer, self).setup(field_name, parent, root)
-        self.child_serializer.setup(field_name, self, root)
+        self.child.setup(field_name, self, root)
 
-    def get_primitive_value(self, dictionary):
+    def get_value(self, dictionary):
         # We override the default field access in order to support
         # lists in HTML forms.
         if is_html_input(dictionary):

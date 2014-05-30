@@ -7,36 +7,42 @@ class TestSerializer:
         class TestSerializer(serializers.Serializer):
             a = fields.IntegerField()
             b = fields.IntegerField()
-        self.serializer = TestSerializer()
+        self.Serializer = TestSerializer
 
     def test_validate(self):
         data = {'a': 1, 'b': 2}
-        assert data == self.serializer.validate(data)
+        serializer = self.Serializer(data=data)
+        assert serializer.is_valid()
+        assert serializer.validated_data == data
 
     def test_create(self):
         data = {'a': 1, 'b': 2}
-        obj = self.serializer.create(data)
-        assert obj.a == 1
-        assert obj.b == 2
+        serializer = self.Serializer(data=data)
+        assert serializer.is_valid()
+        serializer.save()
+        assert serializer.instance.a == 1
+        assert serializer.instance.b == 2
 
     def test_update(self):
-        obj = serializers.BasicObject(a=1, b=2)
         data = {'a': 3, 'b': 4}
-        self.serializer.update(obj, data)
-        assert obj.a == 3
-        assert obj.b == 4
+        obj = serializers.BasicObject(a=1, b=2)
+        serializer = self.Serializer(obj, data=data)
+        assert serializer.is_valid()
+        serializer.save()
+        assert serializer.instance.a == 3
+        assert serializer.instance.b == 4
 
     def test_missing_value(self):
         data = {'b': 2}
-        with pytest.raises(fields.ValidationError) as exc_info:
-            self.serializer.validate(data)
-        # assert exc_info.value == {'a': 'This field is required.'}
+        serializer = self.Serializer(data=data)
+        assert not serializer.is_valid()
+        assert serializer.errors == {'a': 'This field is required.'}
 
     def test_invalid_value(self):
         data = {'a': 'abc', 'b': 2}
-        with pytest.raises(fields.ValidationError) as exc_info:
-            self.serializer.validate(data)
-        #assert exc_info.value == {'a': 'A valid integer is required.'}
+        serializer = self.Serializer(data=data)
+        assert not serializer.is_valid()
+        assert serializer.errors == {'a': 'A valid integer is required.'}
 
 
 class TestSerializerWithTypedFields:
@@ -124,13 +130,15 @@ class TestStarredSource:
             nested1 = NestedSerializer1(source='*')
             nested2 = NestedSerializer2(source='*')
 
-        self.serializer = TestSerializer()
+        self.Serializer = TestSerializer
 
     def test_nested_validate(self):
         """
         A nested representation is validated into a flat internal object.
         """
-        assert self.serializer.validate(self.data) == {
+        serializer = self.Serializer(data=self.data)
+        assert serializer.is_valid()
+        assert serializer.validated_data == {
             'a': 1,
             'b': 2,
             'c': 3,
@@ -141,7 +149,9 @@ class TestStarredSource:
         """
         A nested representation creates an object using the nested values.
         """
-        obj = self.serializer.create(self.data)
+        serializer = self.Serializer(data=self.data)
+        assert serializer.is_valid()
+        obj = serializer.save()
         assert obj.a == 1
         assert obj.b == 2
         assert obj.c == 3
@@ -152,4 +162,5 @@ class TestStarredSource:
         An object can be serialized into a nested representation.
         """
         obj = serializers.BasicObject(a=1, b=2, c=3, d=4)
-        assert self.serializer.serialize(obj) == self.data
+        serializer = self.Serializer(obj)
+        assert serializer.data == self.data

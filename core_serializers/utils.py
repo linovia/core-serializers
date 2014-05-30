@@ -1,4 +1,3 @@
-from collections import OrderedDict, namedtuple
 import re
 
 
@@ -20,53 +19,6 @@ class BasicObject(object):
 
     def __eq__(self, other):
         return self.__dict__ == other.__dict__
-
-
-FieldResult = namedtuple('FieldResult', ['field', 'value', 'error'])
-
-
-class FieldResultsDict(OrderedDict):
-    """
-    A dictionary class that additionally presents an interface for
-    storing and retrieving the field instance that was used for each key.
-    """
-
-    def __init__(self, serializer):
-        super(FieldResultsDict, self).__init__()
-        self.field_results = []
-        self.serializer = serializer
-
-    def set_result(self, field, value, error=None):
-        """
-        Sets a key-value pair, additionally storing the field used.
-        """
-        self[field.field_name] = value
-        self.field_results.append(FieldResult(field, value, error))
-
-    def __repr__(self):
-        return '<FieldResultsDict %s>' % dict.__repr__(self)
-
-
-class ErrorResultsDict(OrderedDict):
-    """
-    A dictionary class that additionally presents an interface for
-    storing and retrieving the field instance that was used for each key.
-    """
-
-    def __init__(self, serializer):
-        super(ErrorResultsDict, self).__init__()
-        self.field_results = []
-        self.serializer = serializer
-
-    def set_result(self, field, value, error=None):
-        """
-        Sets a key-value pair, additionally storing the field used.
-        """
-        self[field.field_name] = error
-        self.field_results.append(FieldResult(field, value, error))
-
-    def __repr__(self):
-        return '<ErrorResultsDict %s>' % dict.__repr__(self)
 
 
 def parse_html_list(dictionary, prefix=''):

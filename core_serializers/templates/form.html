@@ -1,5 +1,5 @@
 <form {% if layout=="inline" %}class="form-inline"{% elif layout=="horizontal" %}class="form-horizontal"{% endif %} role="form" action="" method="POST">
-    {% for field_result in data.field_results %}
+    {% for field_result in form %}
         {{ renderer.render_field(field_result, layout=layout) }}
     {% endfor %}
     {% if layout=="horizontal" %}

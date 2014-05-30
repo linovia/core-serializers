@@ -71,7 +71,7 @@ class Field(object):
         if self.source is None:
             self.source = field_name
 
-    def get_primitive_value(self, dictionary):
+    def get_value(self, dictionary):
         return dictionary.get(self.field_name, empty)
 
     def set_native_value(self, dictionary, value):
@@ -169,11 +169,12 @@ class Field(object):
 
     def __getattr__(self, attr):
         if attr in ('field_name', 'parent', 'root'):
-            raise AssertionError(
-                'Cannot access attribute `%s` on field `IntegerField`. '
-                'The field has not yet been bound to a serializer.' % attr
+            msg = (
+                'Cannot access attribute `%s` on field `%s`. '
+                'The field has not yet been bound to a serializer.'
             )
-        return super(Field, self).__getattr__(attr)
+            raise AssertionError(msg % (attr, self.__class__.__name__))
+        raise AttributeError
 
 
 class BooleanField(Field):
@@ -182,7 +183,7 @@ class BooleanField(Field):
         'invalid_value': '`{input}` is not a valid boolean.'
     }
 
-    def get_primitive_value(self, dictionary):
+    def get_value(self, dictionary):
         if is_html_input(dictionary):
             # HTML forms do not send a `False` value on an empty checkbox,
             # so we override the default empty value to be False.

@@ -135,8 +135,10 @@ class TestInitial:
         """
         Initial values should be included when serializing a new representation.
         """
-        data = self.serializer.serialize()
-        assert data == {'initial_field': 123, 'blank_field': None}
+        assert self.serializer.data == {
+            'initial_field': 123,
+            'blank_field': None
+        }
 
 
 class TestLabel:

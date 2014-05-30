@@ -12,7 +12,7 @@ class TestListSerializer:
         class TestSerializer(serializers.Serializer):
             nested = NestedSerializer()
 
-        self.serializer = TestSerializer()
+        self.Serializer = TestSerializer
 
     def test_nested_validate(self):
         input_data = {
@@ -27,7 +27,9 @@ class TestListSerializer:
                 'two': 2,
             }
         }
-        assert self.serializer.validate(input_data) == expected_data
+        serializer = self.Serializer(data=input_data)
+        assert serializer.is_valid()
+        assert serializer.validated_data == expected_data
 
     def test_nested_create(self):
         input_data = {
@@ -42,10 +44,13 @@ class TestListSerializer:
                 'two': 2,
             }
         )
-        assert self.serializer.create(input_data) == expected_object
+        serializer = self.Serializer(data=input_data)
+        assert serializer.is_valid()
+        serializer.save()
+        assert serializer.instance == expected_object
 
     def test_nested_update(self):
-        update_object = serializers.BasicObject(
+        obj = serializers.BasicObject(
             nested={
                 'one': 1,
                 'two': 2
@@ -63,8 +68,10 @@ class TestListSerializer:
                 'two': 4,
             }
         )
-        self.serializer.update(update_object, input_data)
-        assert update_object == expected_object
+        serializer = self.Serializer(obj, data=input_data)
+        assert serializer.is_valid()
+        serializer.save()
+        assert serializer.instance == expected_object
 
     def test_nested_validate_html_input(self):
         input_data = MultiDict({
@@ -77,7 +84,9 @@ class TestListSerializer:
                 'two': 2,
             }
         }
-        assert self.serializer.validate(input_data) == expected_data
+        serializer = self.Serializer(data=input_data)
+        assert serializer.is_valid()
+        assert serializer.validated_data == expected_data
 
     def test_nested_serialize_empty(self):
         expected_data = {
@@ -86,4 +95,5 @@ class TestListSerializer:
                 'two': None
             }
         }
-        assert self.serializer.serialize() == expected_data
+        serializer = self.Serializer()
+        assert serializer.data == expected_data

@@ -26,19 +26,19 @@ class HTMLFormsBaseCase:
     def setup(self):
         class TestSerializer(serializers.Serializer):
             field_name = copy.copy(self.base_field)
-        self.serializer = TestSerializer()
+        self.Serializer = TestSerializer
         self.renderer = renderers.FormRenderer()
 
     def test_empty_form(self):
-        empty = self.serializer.serialize()
-        output = self.renderer.render(empty)
+        serializer = self.Serializer()
+        output = self.renderer.render(serializer)
         expected = self.form_template % self.empty_html
         assert strip(output) == strip(expected)
 
     def test_populated_form(self):
         obj = BasicObject(field_name=self.populated_value)
-        populated = self.serializer.serialize(obj)
-        output = self.renderer.render(populated)
+        serializer = self.Serializer(obj)
+        output = self.renderer.render(serializer)
         expected = self.form_template % self.populated_html
         assert strip(output) == strip(expected)
 

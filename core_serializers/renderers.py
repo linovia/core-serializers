@@ -40,11 +40,11 @@ class FormRenderer:
         template = env.get_template(template_name)
         return template.render(field=field, value=value, **context)
 
-    def render(self, data, **options):
-        style = getattr(getattr(data.serializer, 'Meta', None), 'style', {})
+    def render(self, form, **options):
+        style = getattr(getattr(form, 'Meta', None), 'style', {})
         layout = style.get('layout', 'vertical')
         template = env.get_template(self.template_name)
-        return template.render(data=data, renderer=self, layout=layout)
+        return template.render(form=form, renderer=self, layout=layout)
 
 
 class JSONRenderer:
