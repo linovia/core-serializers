@@ -98,23 +98,23 @@ class Serializer(Field):
 
         return ret
 
-    def serialize(self, instance):
+    def to_primative(self, instance):
         """
         Object instance -> Dict of primitive datatypes.
         """
         ret = OrderedDict()
 
         for field in self.fields.values():
-            native_value = field.get_native_value(instance)
             if field.write_only:
                 continue
-            ret[field.field_name] = field.serialize(native_value)
+            native_value = field.get_native_value(instance)
+            ret[field.field_name] = field.to_primative(native_value)
 
         return ret
 
     def is_valid(self):
         try:
-            self.validated_data = self.validate(self.initial_data)
+            self.validated_data = self.to_native(self.initial_data)
         except ValidationError, exc:
             self.validated_data = None
             self.errors = exc.message
@@ -139,14 +139,14 @@ class Serializer(Field):
     def data(self):
         if not hasattr(self, '_data'):
             if self.instance is not None:
-                self._data = self.serialize(self.instance)
+                self._data = self.to_primative(self.instance)
             elif self.initial_data is not None:
                 self._data = {
                     field_name: field.get_value(self.initial_data)
                     for field_name, field in self.fields.items()
                 }
             else:
-                self._data = self.serialize(empty)
+                self._data = self.to_primative(empty)
         return self._data
 
     def __iter__(self):
@@ -157,10 +157,20 @@ class Serializer(Field):
 
 
 class ListSerializer(Field):
-    def __init__(self, child, **kwargs):
+    child = None
+
+    def __init__(self, instance=None, data=None, partial=False, child=None, **kwargs):
+        assert child is not None or self.child is not None, (
+            '`child` is a required argument.'
+        )
         super(ListSerializer, self).__init__(**kwargs)
-        self.child = child
-        child.setup('', self, self)
+        self.instance = instance
+        self.initial_data = data
+        self.partial = partial
+        self.child = child if (child is not None) else copy.deepcopy(self.child)
+
+        self.validated_data, self.errors = (None, None)
+        self.child.setup('', self, self)
 
     def setup(self, field_name, parent, root):
         # If the list is used as a field then it needs to provide
@@ -186,32 +196,46 @@ class ListSerializer(Field):
         ret = []
 
         for item in data:
-            native_value = self.child_serializer.validate(item)
+            native_value = self.child.validate(item)
             ret.append(native_value)
 
         return ret
 
-    def serialize(self, data):
+    def to_primative(self, data):
         """
         List of object instances -> List of dicts of primitive datatypes.
         """
-        # TODO: Skip empty returned results?
-        ret = []
+        return [self.child.to_primative(item) for item in data]
 
-        for item in data:
-            primitive_value = self.child_serializer.serialize(item)
-            ret.append(primitive_value)
+    def is_valid(self):
+        try:
+            self.validated_data = self.validate(self.initial_data)
+        except ValidationError, exc:
+            self.validated_data = None
+            self.errors = exc.message
+            return False
+        self.errors = None
+        return True
 
-        return ret
+    def save(self):
+        if self.instance is not None:
+            self.update(self.instance, self.validated_data)
+        self.instance = self.create(self.validated_data)
+        return self.instance
 
-    def create(self, data):
-        ret = []
+    def create(self, attrs_list):
+        return [BasicObject(**attrs) for attrs in attrs_list]
 
-        for item in data:
-            native_value = self.child_serializer.create(item)
-            ret.append(native_value)
-
-        return ret
-
-#     def update(self, instance, data):
-#         TODO
+    @property
+    def data(self):
+        if not hasattr(self, '_data'):
+            if self.instance is not None:
+                self._data = self.to_primative(self.instance)
+            elif self.initial_data is not None:
+                self._data = {
+                    field_name: field.get_value(self.initial_data)
+                    for field_name, field in self.fields.items()
+                }
+            else:
+                self._data = self.to_primative(empty)
+        return self._data

@@ -33,7 +33,7 @@ class TestField:
         """
         By default a field should simply return the data it serializes.
         """
-        assert self.field.serialize(123) == 123
+        assert self.field.to_primative(123) == 123
 
 
 class TestNotRequired:
@@ -72,7 +72,7 @@ class TestReadOnly:
         Read-only fields should be serialized.
         """
         obj = BasicObject(read_only=123, writable=456)
-        data = self.serializer.serialize(obj)
+        data = self.serializer.to_primative(obj)
         assert data == {'read_only': 123, 'writable': 456}
 
 
@@ -96,7 +96,7 @@ class TestWriteOnly:
         Write-only fields should not be serialized.
         """
         obj = BasicObject(write_only=123, readable=456)
-        data = self.serializer.serialize(obj)
+        data = self.serializer.to_primative(obj)
         assert data == {'readable': 456}
 
 
@@ -176,24 +176,6 @@ class TestInvalidErrorKey:
         assert str(exc_info.value) == expected
 
 
-class TestUnboundAccess:
-    def setup(self):
-        self.field = fields.IntegerField(label='My label')
-
-    def test_unbound_access(self):
-        """
-        Attempting to get bind-time attributes on an unbound field will error.
-        """
-        for attr in ('field_name', 'parent', 'root'):
-            with pytest.raises(AssertionError) as exc_info:
-                getattr(self.field, attr)
-            expected = (
-                'Cannot access attribute `{attr}` on field `IntegerField`. '
-                'The field has not yet been bound to a serializer.'
-            ).format(attr=attr)
-            assert str(exc_info.value) == expected
-
-
 class TestBooleanHTMLInput:
     def setup(self):
         class TestSerializer(serializers.Serializer):
@@ -222,6 +204,6 @@ class TestMethodField:
 
     def test_method_field(self):
         obj = serializers.BasicObject(a=1)
-        assert self.serializer.serialize(obj) == {
+        assert self.serializer.to_primative(obj) == {
             'example_method_field': "<BasicObject 'a': 1>"
         }

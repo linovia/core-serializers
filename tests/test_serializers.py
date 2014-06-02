@@ -1,5 +1,4 @@
 from core_serializers import fields, serializers
-import pytest
 
 
 class TestSerializer:
@@ -19,18 +18,18 @@ class TestSerializer:
         data = {'a': 1, 'b': 2}
         serializer = self.Serializer(data=data)
         assert serializer.is_valid()
-        serializer.save()
-        assert serializer.instance.a == 1
-        assert serializer.instance.b == 2
+        obj = serializer.save()
+        assert obj.a == 1
+        assert obj.b == 2
 
     def test_update(self):
         data = {'a': 3, 'b': 4}
         obj = serializers.BasicObject(a=1, b=2)
         serializer = self.Serializer(obj, data=data)
         assert serializer.is_valid()
-        serializer.save()
-        assert serializer.instance.a == 3
-        assert serializer.instance.b == 4
+        obj = serializer.save()
+        assert obj.a == 3
+        assert obj.b == 4
 
     def test_missing_value(self):
         data = {'b': 2}
@@ -51,7 +50,7 @@ class TestSerializerWithTypedFields:
             a = fields.CharField()
             b = fields.IntegerField()
             c = fields.BooleanField()
-        self.serializer = TestSerializer()
+        self.Serializer = TestSerializer
 
     def test_validate(self):
         """
@@ -68,8 +67,9 @@ class TestSerializerWithTypedFields:
             'b': 1,
             'c': True
         }
-        validated = self.serializer.validate(data)
-        assert validated == expected
+        serializer = self.Serializer(data=data)
+        assert serializer.is_valid()
+        assert serializer.validated_data == expected
 
 
 def test_nested_serializer_not_required():
@@ -82,8 +82,9 @@ def test_nested_serializer_not_required():
         a = fields.Field()
 
     data = {'a': 1}
-    serializer = TestSerializer()
-    assert data == serializer.validate(data)
+    serializer = TestSerializer(data=data)
+    assert serializer.is_valid()
+    assert serializer.validated_data == data
 
 
 # def test_nested_serializer_not_required_with_none():

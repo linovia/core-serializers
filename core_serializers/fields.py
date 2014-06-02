@@ -147,15 +147,15 @@ class Field(object):
             return self.get_default()
         return self.to_native(data)
 
-    def serialize(self, value):
+    def to_primative(self, value):
         """
-        Serialize an internal value and return the simple representation.
+        Native value -> Primitive datatype.
         """
         return value
 
     def to_native(self, data):
         """
-        native value <- primitive datatype.
+        Native value <- Primitive datatype.
         """
         return data
 
@@ -166,15 +166,6 @@ class Field(object):
             class_name = self.__class__.__name__
             msg = self._MISSING_ERROR_MESSAGE.format(class_name=class_name, key=key)
             raise AssertionError(msg)
-
-    def __getattr__(self, attr):
-        if attr in ('field_name', 'parent', 'root'):
-            msg = (
-                'Cannot access attribute `%s` on field `%s`. '
-                'The field has not yet been bound to a serializer.'
-            )
-            raise AssertionError(msg % (attr, self.__class__.__name__))
-        raise AttributeError
 
 
 class BooleanField(Field):
@@ -290,7 +281,7 @@ class MethodField(Field):
         kwargs['read_only'] = True
         super(MethodField, self).__init__(**kwargs)
 
-    def serialize(self, value):
+    def to_primative(self, value):
         attr = 'get_{field_name}'.format(field_name=self.field_name)
         method = getattr(self.parent, attr)
         return method(value)

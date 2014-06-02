@@ -10,7 +10,9 @@ class TestListSerializer:
     """
 
     def setup(self):
-        self.serializer = serializers.ListSerializer(child=fields.IntegerField())
+        class IntegerListSerializer(serializers.ListSerializer):
+            child = fields.IntegerField()
+        self.Serializer = IntegerListSerializer
 
     def test_validate(self):
         """
@@ -18,7 +20,9 @@ class TestListSerializer:
         """
         input_data = ["123", "456"]
         expected_output = [123, 456]
-        assert self.serializer.validate(input_data) == expected_output
+        serializer = self.Serializer(data=input_data)
+        assert serializer.is_valid()
+        assert serializer.validated_data == expected_output
 
     def test_validate_html_input(self):
         """
@@ -26,7 +30,9 @@ class TestListSerializer:
         """
         input_data = MultiDict({"[0]": "123", "[1]": "456"})
         expected_output = [123, 456]
-        assert self.serializer.validate(input_data) == expected_output
+        serializer = self.Serializer(data=input_data)
+        assert serializer.is_valid()
+        assert serializer.validated_data == expected_output
 
 
 class TestListSerializerContainingNestedSerializer:
@@ -39,7 +45,10 @@ class TestListSerializerContainingNestedSerializer:
             integer = fields.IntegerField()
             boolean = fields.BooleanField()
 
-        self.serializer = serializers.ListSerializer(TestSerializer())
+        class ObjectListSerializer(serializers.ListSerializer):
+            child = TestSerializer()
+
+        self.Serializer = ObjectListSerializer
 
     def test_validate(self):
         """
@@ -54,7 +63,9 @@ class TestListSerializerContainingNestedSerializer:
             {"integer": 123, "boolean": True},
             {"integer": 456, "boolean": False}
         ]
-        assert self.serializer.validate(input_data) == expected_output
+        serializer = self.Serializer(data=input_data)
+        assert serializer.is_valid()
+        assert serializer.validated_data == expected_output
 
     def test_create(self):
         """
@@ -68,7 +79,9 @@ class TestListSerializerContainingNestedSerializer:
             BasicObject(integer=123, boolean=True),
             BasicObject(integer=456, boolean=False),
         ]
-        assert self.serializer.create(input_data) == expected_output
+        serializer = self.Serializer(data=input_data)
+        assert serializer.is_valid()
+        assert serializer.save() == expected_output
 
     def test_serialize(self):
         """
@@ -82,7 +95,8 @@ class TestListSerializerContainingNestedSerializer:
             {"integer": 123, "boolean": True},
             {"integer": 456, "boolean": False}
         ]
-        assert self.serializer.serialize(input_objects) == expected_output
+        serializer = self.Serializer(input_objects)
+        assert serializer.data == expected_output
 
     def test_validate_html_input(self):
         """
@@ -99,7 +113,9 @@ class TestListSerializerContainingNestedSerializer:
             {"integer": 123, "boolean": True},
             {"integer": 456, "boolean": False}
         ]
-        assert self.serializer.validate(input_data) == expected_output
+        serializer = self.Serializer(data=input_data)
+        assert serializer.is_valid()
+        assert serializer.validated_data == expected_output
 
 
 class TestNestedListSerializer:
@@ -109,10 +125,10 @@ class TestNestedListSerializer:
 
     def setup(self):
         class TestSerializer(serializers.Serializer):
-            integers = serializers.ListSerializer(fields.IntegerField())
-            booleans = serializers.ListSerializer(fields.BooleanField())
+            integers = serializers.ListSerializer(child=fields.IntegerField())
+            booleans = serializers.ListSerializer(child=fields.BooleanField())
 
-        self.serializer = TestSerializer()
+        self.Serializer = TestSerializer
 
     def test_validate(self):
         """
@@ -126,7 +142,9 @@ class TestNestedListSerializer:
             "integers": [123, 456],
             "booleans": [True, False]
         }
-        assert self.serializer.validate(input_data) == expected_output
+        serializer = self.Serializer(data=input_data)
+        assert serializer.is_valid()
+        assert serializer.validated_data == expected_output
 
     def test_create(self):
         """
@@ -141,7 +159,9 @@ class TestNestedListSerializer:
             integers=[123, 456],
             booleans=[True, False]
         )
-        assert self.serializer.create(input_data) == expected_output
+        serializer = self.Serializer(data=input_data)
+        assert serializer.is_valid()
+        assert serializer.save() == expected_output
 
     def test_serialize(self):
         """
@@ -155,7 +175,8 @@ class TestNestedListSerializer:
             "integers": [123, 456],
             "booleans": [True, False]
         }
-        assert self.serializer.serialize(input_object) == expected_output
+        serializer = self.Serializer(input_object)
+        assert serializer.data == expected_output
 
     def test_validate_html_input(self):
         """
@@ -172,20 +193,22 @@ class TestNestedListSerializer:
             "integers": [123, 456],
             "booleans": [True, False]
         }
-        assert self.serializer.validate(input_data) == expected_output
+        serializer = self.Serializer(data=input_data)
+        assert serializer.is_valid()
+        assert serializer.validated_data == expected_output
 
 
 class TestNestedListOfListsSerializer:
     def setup(self):
         class TestSerializer(serializers.Serializer):
             integers = serializers.ListSerializer(
-                serializers.ListSerializer(
-                    fields.IntegerField()
+                child=serializers.ListSerializer(
+                    child=fields.IntegerField()
                 )
             )
             booleans = serializers.ListSerializer(
-                serializers.ListSerializer(
-                    fields.BooleanField()
+                child=serializers.ListSerializer(
+                    child=fields.BooleanField()
                 )
             )
 

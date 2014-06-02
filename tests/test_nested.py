@@ -46,8 +46,8 @@ class TestListSerializer:
         )
         serializer = self.Serializer(data=input_data)
         assert serializer.is_valid()
-        serializer.save()
-        assert serializer.instance == expected_object
+        obj = serializer.save()
+        assert obj == expected_object
 
     def test_nested_update(self):
         obj = serializers.BasicObject(
@@ -70,8 +70,8 @@ class TestListSerializer:
         )
         serializer = self.Serializer(obj, data=input_data)
         assert serializer.is_valid()
-        serializer.save()
-        assert serializer.instance == expected_object
+        obj = serializer.save()
+        assert obj == expected_object
 
     def test_nested_validate_html_input(self):
         input_data = MultiDict({
