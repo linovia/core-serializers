@@ -1,6 +1,6 @@
 from collections import OrderedDict, namedtuple
 from core_serializers.fields import (
-    ValidationError, Field, empty, is_html_input
+    SkipField, ValidationError, Field, empty, is_html_input, set_value
 )
 from core_serializers.utils import (
     BasicObject, parse_html_dict, parse_html_list
@@ -43,11 +43,10 @@ class SerializerMetaclass(type):
 class Serializer(Field):
     __metaclass__ = SerializerMetaclass
 
-    def __init__(self, instance=None, data=None, partial=False, **kwargs):
+    def __init__(self, instance=None, data=None, **kwargs):
         super(Serializer, self).__init__(**kwargs)
         self.instance = instance
         self.initial_data = data
-        self.partial = partial
 
         self.validated_data, self.errors = (None, None)
 
@@ -58,17 +57,20 @@ class Serializer(Field):
 
         # Setup all the child fields, to provide them with the current context.
         for field_name, field in self.fields.items():
-            field.setup(field_name, self, self)
+            field.bind(field_name, self, self)
 
-    def setup(self, field_name, parent, root):
+    def bind(self, field_name, parent, root):
         # If the serializer is used as a field then it needs to provide
         # the current context to all it's child fields.
-        super(Serializer, self).setup(field_name, parent, root)
+        super(Serializer, self).bind(field_name, parent, root)
         for field_name, field in self.fields.items():
-            field.setup(field_name, self, root)
+            field.bind(field_name, self, root)
 
     def get_initial(self):
-        return empty
+        return {
+            field.field_name: field.get_initial()
+            for field in self.fields.values()
+        }
 
     def get_value(self, dictionary):
         # We override the default field access in order to support
@@ -83,15 +85,18 @@ class Serializer(Field):
         """
         ret = {}
         errors = {}
+        fields = [field for field in self.fields.values() if not field.read_only]
 
-        for field in self.fields.values():
-            value = field.get_value(data)
+        for field in fields:
             try:
-                validated_value = field.validate(value)
+                primitive_value = field.get_value(data)
+                validated_value = field.validate(primitive_value)
             except ValidationError as exc:
                 errors[field.field_name] = str(exc)
+            except SkipField:
+                pass
             else:
-                field.set_native_value(ret, validated_value)
+                set_value(ret, field.source_attrs, validated_value)
 
         if errors:
             raise ValidationError(errors)
@@ -103,11 +108,10 @@ class Serializer(Field):
         Object instance -> Dict of primitive datatypes.
         """
         ret = OrderedDict()
+        fields = [field for field in self.fields.values() if not field.write_only]
 
-        for field in self.fields.values():
-            if field.write_only:
-                continue
-            native_value = field.get_native_value(instance)
+        for field in fields:
+            native_value = field.get_attribute(instance)
             ret[field.field_name] = field.to_primative(native_value)
 
         return ret
@@ -128,12 +132,12 @@ class Serializer(Field):
         self.instance = self.create(self.validated_data)
         return self.instance
 
-    def update(self, instance, attrs):
-        for key, value in attrs.items():
+    def update(self, instance, validated_data):
+        for key, value in validated_data.items():
             setattr(instance, key, value)
 
-    def create(self, attrs):
-        return BasicObject(**attrs)
+    def create(self, validated_data):
+        return BasicObject(**validated_data)
 
     @property
     def data(self):
@@ -146,7 +150,7 @@ class Serializer(Field):
                     for field_name, field in self.fields.items()
                 }
             else:
-                self._data = self.to_primative(empty)
+                self._data = self.get_initial()
         return self._data
 
     def __iter__(self):
@@ -159,24 +163,27 @@ class Serializer(Field):
 class ListSerializer(Field):
     child = None
 
-    def __init__(self, instance=None, data=None, partial=False, child=None, **kwargs):
+    def __init__(self, instance=None, data=None, child=None, **kwargs):
         assert child is not None or self.child is not None, (
             '`child` is a required argument.'
         )
         super(ListSerializer, self).__init__(**kwargs)
         self.instance = instance
         self.initial_data = data
-        self.partial = partial
-        self.child = child if (child is not None) else copy.deepcopy(self.child)
 
         self.validated_data, self.errors = (None, None)
-        self.child.setup('', self, self)
 
-    def setup(self, field_name, parent, root):
+        self.child = child if (child is not None) else copy.deepcopy(self.child)
+        self.child.bind('', self, self)
+
+    def bind(self, field_name, parent, root):
         # If the list is used as a field then it needs to provide
         # the current context to the child serializer.
-        super(ListSerializer, self).setup(field_name, parent, root)
-        self.child.setup(field_name, self, root)
+        super(ListSerializer, self).bind(field_name, parent, root)
+        self.child.bind(field_name, self, root)
+
+    def get_initial(self):
+        return []
 
     def get_value(self, dictionary):
         # We override the default field access in order to support
@@ -192,14 +199,7 @@ class ListSerializer(Field):
         if is_html_input(data):
             data = parse_html_list(data)
 
-        # TODO: Skip empty returned results?
-        ret = []
-
-        for item in data:
-            native_value = self.child.validate(item)
-            ret.append(native_value)
-
-        return ret
+        return [self.child.validate(item) for item in data]
 
     def to_primative(self, data):
         """
@@ -237,5 +237,5 @@ class ListSerializer(Field):
                     for field_name, field in self.fields.items()
                 }
             else:
-                self._data = self.to_primative(empty)
+                self._data = self.get_initial()
         return self._data

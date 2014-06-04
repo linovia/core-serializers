@@ -41,15 +41,16 @@ class TestNotRequired:
         class TestSerializer(serializers.Serializer):
             optional = fields.IntegerField(required=False)
             mandatory = fields.IntegerField()
-        self.serializer = TestSerializer()
+        self.Serializer = TestSerializer
 
     def test_validate_read_only(self):
         """
         Non-required fields may be omitted in validation.
         """
         data = {'mandatory': 123}
-        validated = self.serializer.validate(data)
-        assert validated == {'mandatory': 123}
+        serializer = self.Serializer(data=data)
+        assert serializer.is_valid()
+        assert serializer.validated_data == {'mandatory': 123}
 
 
 class TestReadOnly:

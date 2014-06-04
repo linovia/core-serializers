@@ -8,7 +8,30 @@ class empty:
     pass
 
 
+def get_attribute(instance, attrs):
+    for attr in attrs:
+        instance = getattr(instance, attr)
+    return instance
+
+
+def set_value(dictionary, keys, value):
+    if not keys:
+        dictionary.update(value)
+        return
+
+    for key in keys[:-1]:
+        if key not in dictionary:
+            dictionary[key] = {}
+        dictionary = dictionary[key]
+
+    dictionary[keys[-1]] = value
+
+
 class ValidationError(Exception):
+    pass
+
+
+class SkipField(Exception):
     pass
 
 
@@ -59,63 +82,49 @@ class Field(object):
         self.label = label
         self.style = {} if style is None else style
 
-    def setup(self, field_name, parent, root):
+    def bind(self, field_name, parent, root):
         """
         Setup the context for the field instance.
         """
         self.field_name = field_name
         self.parent = parent
         self.root = root
+
+        # `self.label` should deafult to being based on the field name.
         if self.label is None:
             self.label = self.field_name.replace('_', ' ').capitalize()
+
+        # self.source should default to being the same as the field name.
         if self.source is None:
             self.source = field_name
 
+        # self.source_attrs is a list of attributes that need to be looked up
+        # when serializing the instance, or populating the validated data.
+        if self.source == '*':
+            self.source_attrs = []
+        else:
+            self.source_attrs = self.source.split('.')
+
+    def get_initial(self):
+        """
+        Return a value to use when the field is being returned as a primative
+        value, without any object instance.
+        """
+        return self.initial
+
     def get_value(self, dictionary):
+        """
+        Given the *incoming* primative data, return the value for this field
+        that should be validated and transformed to a native value.
+        """
         return dictionary.get(self.field_name, empty)
 
-    def set_native_value(self, dictionary, value):
+    def get_attribute(self, instance):
         """
-        Given a dictionary, set the key that this field should populate
-        after validation.
+        Given the *outgoing* object instance, return the value for this field
+        that should be returned as a primative value.
         """
-        if value is empty:
-            return
-
-        if self.source == '*':
-            # Deal with special case '*' and update whole dictionary,
-            # not just a single key in the dictionary.
-            dictionary.update(value)
-            return
-
-        # Deal with regular or nested lookups.
-        key = self.source
-        while '.' in key:
-            next, key = key.split('.', 1)
-            dictionary = dictionary.get(next, {})
-
-        dictionary[key] = value
-
-    def get_native_value(self, instance=empty):
-        """
-        Given an object instance, return the attribute value that this
-        field should serialize.
-        """
-        if instance is empty:
-            return self.get_initial()
-
-        if self.source == '*':
-            # Deal with special case '*' and return the whole instance,
-            # not just an attribute on the instance.
-            return instance
-
-        # Deal with regular or nested lookups.
-        key = self.source
-        while '.' in key:
-            next, key = key.split('.', 1)
-            instance = getattr(instance, next)
-
-        return getattr(instance, key)
+        return get_attribute(instance, self.source_attrs)
 
     def get_default(self):
         """
@@ -126,10 +135,9 @@ class Field(object):
         return `empty`, indicating that no value should be set in the
         validated data for this field.
         """
+        if self.default is empty:
+            raise SkipField()
         return self.default
-
-    def get_initial(self):
-        return self.initial
 
     def validate(self, data=empty):
         """
@@ -139,27 +147,29 @@ class Field(object):
         May return `empty` if the field should not be included in the
         validated data.
         """
-        if self.read_only:
-            return empty
-        elif data is empty and self.required:
-            self.fail('required')
-        elif data is empty:
+        if data is empty:
+            if self.required:
+                self.fail('required')
             return self.get_default()
-        return self.to_native(data)
 
-    def to_primative(self, value):
-        """
-        Native value -> Primitive datatype.
-        """
-        return value
+        return self.to_native(data)
 
     def to_native(self, data):
         """
-        Native value <- Primitive datatype.
+        Transform the *incoming* primative data into a native value.
         """
         return data
 
+    def to_primative(self, value):
+        """
+        Transform the *outgoing* native value into primative data.
+        """
+        return value
+
     def fail(self, key, **kwargs):
+        """
+        A helper method that simply raises a validation error.
+        """
         try:
             raise ValidationError(self.MESSAGES[key].format(**kwargs))
         except KeyError:
@@ -173,6 +183,8 @@ class BooleanField(Field):
         'required': 'This field is required.',
         'invalid_value': '`{input}` is not a valid boolean.'
     }
+    TRUE_VALUES = {'t', 'T', 'true', 'True', 'TRUE', '1', 1, True}
+    FALSE_VALUES = {'f', 'F', 'false', 'False', 'FALSE', '0', 0, 0.0, False}
 
     def get_value(self, dictionary):
         if is_html_input(dictionary):
@@ -182,9 +194,9 @@ class BooleanField(Field):
         return dictionary.get(self.field_name, empty)
 
     def to_native(self, data):
-        if data in ('true', 't', 'True', '1', 1, True):
+        if data in self.TRUE_VALUES:
             return True
-        elif data in ('false', 'f', 'False', '0', 0, 0.0, False):
+        elif data in self.FALSE_VALUES:
             return False
         self.fail('invalid_value', input=data)
 
