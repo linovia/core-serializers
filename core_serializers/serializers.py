@@ -11,6 +11,47 @@ import copy
 FieldResult = namedtuple('FieldResult', ['field', 'value', 'error'])
 
 
+class BaseSerializer(Field):
+    def __init__(self, instance=None, data=None, **kwargs):
+        super(BaseSerializer, self).__init__(**kwargs)
+        self.instance = instance
+        self.initial_data = data
+        self.validated_data, self.errors = (None, None)
+
+    def to_native(self, data):
+        raise NotImplementedError()
+
+    def to_primative(self, instance):
+        raise NotImplementedError()
+
+    def save(self):
+        raise NotImplementedError()
+
+    def is_valid(self):
+        try:
+            self.validated_data = self.to_native(self.initial_data)
+        except ValidationError, exc:
+            self.validated_data = None
+            self.errors = exc.message
+            return False
+        self.errors = None
+        return True
+
+    @property
+    def data(self):
+        if not hasattr(self, '_data'):
+            if self.instance is not None:
+                self._data = self.to_primative(self.instance)
+            elif self.initial_data is not None:
+                self._data = {
+                    field_name: field.get_value(self.initial_data)
+                    for field_name, field in self.fields.items()
+                }
+            else:
+                self._data = self.get_initial()
+        return self._data
+
+
 class SerializerMetaclass(type):
     """
     This metaclass sets a dictionary named `_fields` on the class.
@@ -40,15 +81,11 @@ class SerializerMetaclass(type):
         return super(SerializerMetaclass, cls).__new__(cls, name, bases, attrs)
 
 
-class Serializer(Field):
+class Serializer(BaseSerializer):
     __metaclass__ = SerializerMetaclass
 
-    def __init__(self, instance=None, data=None, **kwargs):
-        super(Serializer, self).__init__(**kwargs)
-        self.instance = instance
-        self.initial_data = data
-
-        self.validated_data, self.errors = (None, None)
+    def __init__(self, *args, **kwargs):
+        super(Serializer, self).__init__(*args, **kwargs)
 
         # Every new serializer is created with a clone of the field instances.
         # This allows users to dynamically modify the fields on a serializer
@@ -88,8 +125,8 @@ class Serializer(Field):
         fields = [field for field in self.fields.values() if not field.read_only]
 
         for field in fields:
+            primitive_value = field.get_value(data)
             try:
-                primitive_value = field.get_value(data)
                 validated_value = field.validate(primitive_value)
             except ValidationError as exc:
                 errors[field.field_name] = str(exc)
@@ -116,22 +153,6 @@ class Serializer(Field):
 
         return ret
 
-    def is_valid(self):
-        try:
-            self.validated_data = self.to_native(self.initial_data)
-        except ValidationError, exc:
-            self.validated_data = None
-            self.errors = exc.message
-            return False
-        self.errors = None
-        return True
-
-    def save(self):
-        if self.instance is not None:
-            self.update(self.instance, self.validated_data)
-        self.instance = self.create(self.validated_data)
-        return self.instance
-
     def update(self, instance, validated_data):
         for key, value in validated_data.items():
             setattr(instance, key, value)
@@ -139,19 +160,11 @@ class Serializer(Field):
     def create(self, validated_data):
         return BasicObject(**validated_data)
 
-    @property
-    def data(self):
-        if not hasattr(self, '_data'):
-            if self.instance is not None:
-                self._data = self.to_primative(self.instance)
-            elif self.initial_data is not None:
-                self._data = {
-                    field_name: field.get_value(self.initial_data)
-                    for field_name, field in self.fields.items()
-                }
-            else:
-                self._data = self.get_initial()
-        return self._data
+    def save(self):
+        if self.instance is not None:
+            self.update(self.instance, self.validated_data)
+        self.instance = self.create(self.validated_data)
+        return self.instance
 
     def __iter__(self):
         for field in self.fields.values():
@@ -160,20 +173,14 @@ class Serializer(Field):
             yield FieldResult(field, value, error)
 
 
-class ListSerializer(Field):
+class ListSerializer(BaseSerializer):
     child = None
+    initial = []
 
-    def __init__(self, instance=None, data=None, child=None, **kwargs):
-        assert child is not None or self.child is not None, (
-            '`child` is a required argument.'
-        )
-        super(ListSerializer, self).__init__(**kwargs)
-        self.instance = instance
-        self.initial_data = data
-
-        self.validated_data, self.errors = (None, None)
-
-        self.child = child if (child is not None) else copy.deepcopy(self.child)
+    def __init__(self, *args, **kwargs):
+        self.child = kwargs.pop('child', copy.deepcopy(self.child))
+        assert self.child is not None, '`child` is a required argument.'
+        super(ListSerializer, self).__init__(*args, **kwargs)
         self.child.bind('', self, self)
 
     def bind(self, field_name, parent, root):
@@ -181,9 +188,6 @@ class ListSerializer(Field):
         # the current context to the child serializer.
         super(ListSerializer, self).bind(field_name, parent, root)
         self.child.bind(field_name, self, root)
-
-    def get_initial(self):
-        return []
 
     def get_value(self, dictionary):
         # We override the default field access in order to support
@@ -207,35 +211,11 @@ class ListSerializer(Field):
         """
         return [self.child.to_primative(item) for item in data]
 
-    def is_valid(self):
-        try:
-            self.validated_data = self.validate(self.initial_data)
-        except ValidationError, exc:
-            self.validated_data = None
-            self.errors = exc.message
-            return False
-        self.errors = None
-        return True
+    def create(self, attrs_list):
+        return [BasicObject(**attrs) for attrs in attrs_list]
 
     def save(self):
         if self.instance is not None:
             self.update(self.instance, self.validated_data)
         self.instance = self.create(self.validated_data)
         return self.instance
-
-    def create(self, attrs_list):
-        return [BasicObject(**attrs) for attrs in attrs_list]
-
-    @property
-    def data(self):
-        if not hasattr(self, '_data'):
-            if self.instance is not None:
-                self._data = self.to_primative(self.instance)
-            elif self.initial_data is not None:
-                self._data = {
-                    field_name: field.get_value(self.initial_data)
-                    for field_name, field in self.fields.items()
-                }
-            else:
-                self._data = self.get_initial()
-        return self._data

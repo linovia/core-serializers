@@ -7,8 +7,7 @@ class HTMLDict(dict):
     """
     A mock MultiDict that can be used for representing HTML input.
     """
-    def getlist(self):
-        pass  # pragma: no cover
+    getlist = None
 
 
 class TestField:
