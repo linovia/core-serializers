@@ -1,4 +1,4 @@
 core-serializers
 ================
 
-Proof on concept for serializer redesign.
+Proof of concept for serializer redesign.
