@@ -1,9 +1,9 @@
 from collections import OrderedDict, namedtuple
 from core_serializers.fields import (
-    SkipField, ValidationError, Field, empty, is_html_input, set_value
+    SkipField, ValidationError, Field
 )
 from core_serializers.utils import (
-    BasicObject, parse_html_dict, parse_html_list
+    BasicObject, parse_html_dict, parse_html_list, empty, is_html_input, set_value
 )
 import copy
 
@@ -15,8 +15,7 @@ class BaseSerializer(Field):
     def __init__(self, instance=None, data=None, **kwargs):
         super(BaseSerializer, self).__init__(**kwargs)
         self.instance = instance
-        self.initial_data = data
-        self.validated_data, self.errors = (None, None)
+        self._initial_data = data
 
     def to_native(self, data):
         raise NotImplementedError()
@@ -29,12 +28,12 @@ class BaseSerializer(Field):
 
     def is_valid(self):
         try:
-            self.validated_data = self.to_native(self.initial_data)
+            self._validated_data = self.to_native(self._initial_data)
         except ValidationError, exc:
-            self.validated_data = None
-            self.errors = exc.message
+            self._validated_data = {}
+            self._errors = exc.message
             return False
-        self.errors = None
+        self._errors = {}
         return True
 
     @property
@@ -42,14 +41,28 @@ class BaseSerializer(Field):
         if not hasattr(self, '_data'):
             if self.instance is not None:
                 self._data = self.to_primative(self.instance)
-            elif self.initial_data is not None:
+            elif self._initial_data is not None:
                 self._data = {
-                    field_name: field.get_value(self.initial_data)
+                    field_name: field.get_value(self._initial_data)
                     for field_name, field in self.fields.items()
                 }
             else:
                 self._data = self.get_initial()
         return self._data
+
+    @property
+    def errors(self):
+        if not hasattr(self, '_errors'):
+            msg = 'You must call `.is_valid()` before accessing `.errors`.'
+            raise AssertionError(msg)
+        return self._errors
+
+    @property
+    def validated_data(self):
+        if not hasattr(self, '_validated_data'):
+            msg = 'You must call `.is_valid()` before accessing `.validated_data`.'
+            raise AssertionError(msg)
+        return self._validated_data
 
 
 class SerializerMetaclass(type):
@@ -97,8 +110,8 @@ class Serializer(BaseSerializer):
             field.bind(field_name, self, self)
 
     def bind(self, field_name, parent, root):
-        # If the serializer is used as a field then it needs to provide
-        # the current context to all it's child fields.
+        # If the serializer is used as a field then when it becomes bound
+        # it also needs to bind all its child fields.
         super(Serializer, self).bind(field_name, parent, root)
         for field_name, field in self.fields.items():
             field.bind(field_name, self, root)
@@ -167,9 +180,10 @@ class Serializer(BaseSerializer):
         return self.instance
 
     def __iter__(self):
+        errors = self.errors if hasattr(self, '_errors') else {}
         for field in self.fields.values():
             value = self.data.get(field.field_name) if self.data else None
-            error = self.errors.get(field.field_name) if self.errors else None
+            error = errors.get(field.field_name)
             yield FieldResult(field, value, error)
 
 

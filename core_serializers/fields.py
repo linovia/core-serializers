@@ -1,30 +1,4 @@
-class empty:
-    """
-    This class is used to represent no data being provided for a given input
-    or output value.
-
-    It is required because `None` may be a valid input or output value.
-    """
-    pass
-
-
-def get_attribute(instance, attrs):
-    for attr in attrs:
-        instance = getattr(instance, attr)
-    return instance
-
-
-def set_value(dictionary, keys, value):
-    if not keys:
-        dictionary.update(value)
-        return
-
-    for key in keys[:-1]:
-        if key not in dictionary:
-            dictionary[key] = {}
-        dictionary = dictionary[key]
-
-    dictionary[keys[-1]] = value
+from core_serializers.utils import empty, get_attribute, is_html_input
 
 
 class ValidationError(Exception):
@@ -33,12 +7,6 @@ class ValidationError(Exception):
 
 class SkipField(Exception):
     pass
-
-
-def is_html_input(dictionary):
-    # MultiDict type datastructures are used to represent HTML form input,
-    # which may have more than one value for each key.
-    return hasattr(dictionary, 'getlist')
 
 
 class Field(object):

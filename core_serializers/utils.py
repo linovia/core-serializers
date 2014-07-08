@@ -21,6 +21,53 @@ class BasicObject(object):
         return self.__dict__ == other.__dict__
 
 
+class empty:
+    """
+    This class is used to represent no data being provided for a given input
+    or output value.
+
+    It is required because `None` may be a valid input or output value.
+    """
+    pass
+
+
+def is_html_input(dictionary):
+    # MultiDict type datastructures are used to represent HTML form input,
+    # which may have more than one value for each key.
+    return hasattr(dictionary, 'getlist')
+
+
+def get_attribute(instance, attrs):
+    """
+    Similar to Python's built in `getattr(instance, attr)`,
+    but takes a list of nested attributes.
+    """
+    for attr in attrs:
+        instance = getattr(instance, attr)
+    return instance
+
+
+def set_value(dictionary, keys, value):
+    """
+    Similar to Python's built in `dictionary[key] = value`,
+    but takes a list of nested keys.
+
+    set_value({'a': 1}, [], {'b': 2}) -> {'a': 1, 'b': 2}
+    set_value({'a': 1}, ['x'], 2) -> {'a': 1, 'x': 2}
+    set_value({'a': 1}, ['x', 'y'], 2) -> {'a': 1, 'x': {'y': 2}}
+    """
+    if not keys:
+        dictionary.update(value)
+        return
+
+    for key in keys[:-1]:
+        if key not in dictionary:
+            dictionary[key] = {}
+        dictionary = dictionary[key]
+
+    dictionary[keys[-1]] = value
+
+
 def parse_html_list(dictionary, prefix=''):
     """
     Used to suport list values in HTML forms.
