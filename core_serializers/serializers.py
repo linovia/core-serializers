@@ -1,3 +1,4 @@
+from six import add_metaclass
 from collections import OrderedDict, namedtuple
 from core_serializers.fields import (
     SkipField, ValidationError, Field
@@ -29,7 +30,7 @@ class BaseSerializer(Field):
     def is_valid(self):
         try:
             self._validated_data = self.to_native(self._initial_data)
-        except ValidationError, exc:
+        except ValidationError as exc:
             self._validated_data = {}
             self._errors = exc.message
             return False
@@ -76,7 +77,7 @@ class SerializerMetaclass(type):
     @classmethod
     def _get_fields(cls, bases, attrs):
         fields = [(field_name, attrs.pop(field_name))
-                  for field_name, obj in attrs.items()
+                  for field_name, obj in list(attrs.items())
                   if isinstance(obj, Field)]
         fields.sort(key=lambda x: x[1]._creation_counter)
 
@@ -94,8 +95,8 @@ class SerializerMetaclass(type):
         return super(SerializerMetaclass, cls).__new__(cls, name, bases, attrs)
 
 
+@add_metaclass(SerializerMetaclass)
 class Serializer(BaseSerializer):
-    __metaclass__ = SerializerMetaclass
 
     def __init__(self, *args, **kwargs):
         super(Serializer, self).__init__(*args, **kwargs)
