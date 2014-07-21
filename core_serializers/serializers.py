@@ -32,7 +32,7 @@ class BaseSerializer(Field):
             self._validated_data = self.to_native(self._initial_data)
         except ValidationError as exc:
             self._validated_data = {}
-            self._errors = exc.message
+            self._errors = exc.args[0]
             return False
         self._errors = {}
         return True
