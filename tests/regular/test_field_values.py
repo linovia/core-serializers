@@ -112,7 +112,7 @@ class TestMultipleChoiceField(ValidAndInvalidValues):
         ('aircon', 'manual'): set(['aircon', 'manual']),
     }
     invalid_mappings = {
-        'abc': 'Expected a list of items but got type `str`',
+        1: 'Expected a list of items but got type `int`',
         ('aircon', 'incorrect'): '`incorrect` is not a valid choice.'
     }
     base_field = fields.MultipleChoiceField(
