@@ -22,6 +22,10 @@ def pytest_configure():
             'rest_framework',
             'tests.django.app',
         ),
+        MIDDLEWARE_CLASSES=(
+            'django.middleware.common.CommonMiddleware',
+            'django.middleware.csrf.CsrfViewMiddleware',
+        )
     )
     try:
         import django
