@@ -1,6 +1,7 @@
 
 from django.db import models
 from django.forms import widgets
+from django.utils.six import add_metaclass
 
 # from rest_framework.relations import *  # NOQA
 # from rest_framework.fields import *  # NOQA
@@ -22,7 +23,7 @@ class ModelSerializerOptions(object):
         # self.write_only_fields = getattr(meta, 'write_only_fields', ())
 
 
-class ModelSerializerMetaclass(serialiazers.SerializerMetaclass):
+class ModelSerializerMetaclass(serializers.SerializerMetaclass):
     def __new__(cls, name, bases, attrs):
         # attrs['_fields'] = cls._get_fields(bases, attrs)
         return super(ModelSerializerMetaclass, cls).__new__(cls, name, bases, attrs)
