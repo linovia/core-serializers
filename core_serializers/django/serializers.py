@@ -24,63 +24,77 @@ class ModelSerializerOptions(object):
 
 
 class ModelSerializerMetaclass(serializers.SerializerMetaclass):
-    def __new__(cls, name, bases, attrs):
-        # attrs['_fields'] = cls._get_fields(bases, attrs)
-        return super(ModelSerializerMetaclass, cls).__new__(cls, name, bases, attrs)
+    def __new__(self, name, bases, attrs):
+        # Skip the field construction if this is applied on the base class
+        if name != 'ModelSerializer':
+            print(bases[0].field_mapping.keys())
+            self._get_fields(bases, attrs)
+        cls = type.__new__(self, name, bases, attrs)
+        return cls
+
+    #
+    # Helper to browse the class history
+    # Required because we don't have yet a fully working class
+    #
 
     #
     # Extracts the fields from the model
     #
 
-    def get_default_fields(self):
+    @classmethod
+    def get_default_fields(cls, bases, attrs):
         """
         Return all the fields that should be serialized for the model.
         """
-        cls = self.opts.model
-        assert cls is not None, \
-                "Serializer class '%s' is missing 'model' Meta option" % self.__class__.__name__
-        opts = cls._meta.concrete_model._meta  # TODO: Does this makes sense ?
+        model = getattr(attrs['Meta'], 'model', None)
+        assert model is not None, \
+                "Serializer class '%s' is missing 'model' Meta option (%s)" % (model.__class__.__name__, bases)
+
         ret = OrderedDict()
 
-        ret.update(self.get_pk(opts))
+        # TODO: Rework the primary key field detection
+        # ret.update(cls.get_pk(opts))
 
-        for model_field in opts.fields:
-            if model_field.serialize:
-                field = self.get_field(model_field)
+        fields = getattr(attrs['Meta'], 'fields', [])
+        for field_name in fields:
+            model_field = model._meta.get_field_by_name(field_name)[0]
+            field = cls.get_field(model_field)
 
-                if field:
-                    ret[model_field.name] = field
+            if field:
+                ret[model_field.name] = field
 
         return ret
 
-    def get_fields(self):
+    @classmethod
+    def _get_fields(self, bases, attrs):
         """
         Returns the complete set of fields for the object as a dict.
 
         This will be the set of any explicitly declared fields,
         plus the set of fields returned by get_default_fields().
         """
+        base = super(ModelSerializerMetaclass, self)._get_fields(bases, attrs)
         ret = OrderedDict()
 
-        # Get the explicitly declared fields
-        # base_fields = copy.deepcopy(self.base_fields)
-        # for key, field in base_fields.items():
-        #     ret[key] = field
-
         # Add in the default fields
-        default_fields = self.get_default_fields()
+        default_fields = self.get_default_fields(bases, attrs)
         for key, val in default_fields.items():
             if key not in ret:
                 ret[key] = val
 
         # If 'fields' is specified, use those fields, in that order.
-        if self.opts.fields:
-            assert isinstance(self.opts.fields, (list, tuple)), '`fields` must be a list or tuple'
+        fields = getattr(attrs['Meta'], 'fields', [])
+        if fields:
+            assert isinstance(fields, (list, tuple)), '`fields` must be a list or tuple'
             new = SortedDict()
-            for key in self.opts.fields:
+            for key in fields:
                 new[key] = ret[key]
             ret = new
 
+        # Reintegrate the explicit fields
+        ret.update(base)
+
+        # TODO: check if we still need to initialize the fields
         # for key, field in ret.items():
         #     field.initialize(parent=self, field_name=key)
 
@@ -118,7 +132,8 @@ class ModelSerializerMetaclass(serializers.SerializerMetaclass):
     #
     # Field creation
     #
-    def get_field(self, model_field):
+    @classmethod
+    def get_field(cls, model_field):
         """
         Creates a default instance of a basic non-relational field.
         """
@@ -171,7 +186,7 @@ class ModelSerializerMetaclass(serializers.SerializerMetaclass):
                 kwargs.update({attribute: getattr(model_field, attribute)})
 
         try:
-            return self.field_mapping[model_field.__class__](**kwargs)
+            return cls.field_mapping[model_field.__class__](**kwargs)
         except KeyError:
             return Field(model_field=model_field, **kwargs)
 

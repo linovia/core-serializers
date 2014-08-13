@@ -3,6 +3,7 @@ import pytest
 from collections import OrderedDict
 
 from django.contrib.auth.models import User
+import core_serializers.serializers
 from core_serializers.django import serializers
 
 
@@ -10,6 +11,23 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
 
+
+def test_metaclass_get_default_fields():
+    class Meta:
+        model = User
+        fields = ('first_name', 'last_name')
+    name = 'DemoSerializer'
+    bases = (
+        serializers.ModelSerializer,
+    )
+    attrs = {
+        'Meta': Meta
+    }
+    meta = serializers.ModelSerializerMetaclass(name, bases, attrs)
+    assert meta.get_default_fields(bases, attrs) == OrderedDict([
+        ('first_name', None),
+        ('last_name', None),
+    ])
 
 def test_find_fields():
     serializer = UserSerializer()
