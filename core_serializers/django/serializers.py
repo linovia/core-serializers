@@ -3,10 +3,9 @@ from django.db import models
 from django.forms import widgets
 from django.utils.six import add_metaclass
 
-# from rest_framework.relations import *  # NOQA
-# from rest_framework.fields import *  # NOQA
+# from core_serializers.fields import *  # NOQA
+from .fields import *
 
-from core_serializers.fields import *  # NOQA
 from core_serializers import serializers
 from collections import OrderedDict
 
@@ -27,66 +26,91 @@ class ModelSerializerMetaclass(serializers.SerializerMetaclass):
     def __new__(self, name, bases, attrs):
         # Skip the field construction if this is applied on the base class
         if name != 'ModelSerializer':
-            print(bases[0].field_mapping.keys())
-            self._get_fields(bases, attrs)
-        cls = type.__new__(self, name, bases, attrs)
+            introspection = ModelIntrospection(self, name, bases, attrs)
+            attrs.update(introspection._get_fields())
+        cls = super(ModelSerializerMetaclass, self).__new__(self, name, bases, attrs)
         return cls
 
-    #
-    # Helper to browse the class history
-    # Required because we don't have yet a fully working class
-    #
+
+class ModelIntrospection(object):
+
+    def __init__(self, metacls, name, bases, attrs):
+        self.metacls = metacls
+        self.name = name
+        self.bases = bases
+        self.attrs = attrs
+
+    def get_from_bases(self, attr_name):
+        '''
+        Helper to browse the class history
+        Required because we don't have yet a fully working class
+        '''
+        try:
+            return self.attrs[attr_name]
+        except KeyError:
+            pass
+
+        for base in self.bases:
+            try:
+                return getattr(base, attr_name)
+            except AttributeError:
+                pass
+        return None
+
 
     #
     # Extracts the fields from the model
     #
 
-    @classmethod
-    def get_default_fields(cls, bases, attrs):
+    def get_default_fields(self):
         """
         Return all the fields that should be serialized for the model.
         """
-        model = getattr(attrs['Meta'], 'model', None)
+        meta = self.get_from_bases('Meta')
+        model = getattr(meta, 'model', None)
         assert model is not None, \
-                "Serializer class '%s' is missing 'model' Meta option (%s)" % (model.__class__.__name__, bases)
+                "Serializer class '%s' is missing 'model' Meta option (%s)" % (model.__class__.__name__, self.bases)
 
         ret = OrderedDict()
 
         # TODO: Rework the primary key field detection
-        # ret.update(cls.get_pk(opts))
+        # ret.update(self.metacls.get_pk(opts))
 
-        fields = getattr(attrs['Meta'], 'fields', [])
+        # Get the meta fields or fallback on all the model's fields
+        fields = getattr(meta, 'fields',
+            [f.name for f in model._meta.concrete_fields])
+
+        # Create the associated dictionnary
         for field_name in fields:
             model_field = model._meta.get_field_by_name(field_name)[0]
-            field = cls.get_field(model_field)
+            field = self.get_field(model_field)
 
             if field:
                 ret[model_field.name] = field
 
         return ret
 
-    @classmethod
-    def _get_fields(self, bases, attrs):
+    def _get_fields(self): #, bases, attrs):
         """
         Returns the complete set of fields for the object as a dict.
 
         This will be the set of any explicitly declared fields,
         plus the set of fields returned by get_default_fields().
         """
-        base = super(ModelSerializerMetaclass, self)._get_fields(bases, attrs)
+        base = self.metacls._get_fields(self.bases, self.attrs)
         ret = OrderedDict()
 
         # Add in the default fields
-        default_fields = self.get_default_fields(bases, attrs)
+        default_fields = self.get_default_fields()
         for key, val in default_fields.items():
             if key not in ret:
                 ret[key] = val
 
         # If 'fields' is specified, use those fields, in that order.
-        fields = getattr(attrs['Meta'], 'fields', [])
+        fields = getattr(self.attrs['Meta'], 'fields', [])
         if fields:
             assert isinstance(fields, (list, tuple)), '`fields` must be a list or tuple'
-            new = SortedDict()
+            new = OrderedDict()
             for key in fields:
                 new[key] = ret[key]
             ret = new
@@ -132,8 +156,7 @@ class ModelSerializerMetaclass(serializers.SerializerMetaclass):
     #
     # Field creation
     #
-    @classmethod
-    def get_field(cls, model_field):
+    def get_field(self, model_field):
         """
         Creates a default instance of a basic non-relational field.
         """
@@ -186,7 +209,8 @@ class ModelSerializerMetaclass(serializers.SerializerMetaclass):
                 kwargs.update({attribute: getattr(model_field, attribute)})
 
         try:
-            return cls.field_mapping[model_field.__class__](**kwargs)
+            field_mapping = self.get_from_bases('field_mapping')
+            return field_mapping[model_field.__class__](**kwargs)
         except KeyError:
             return Field(model_field=model_field, **kwargs)
 
@@ -224,26 +248,26 @@ class ModelSerializer(serializers.Serializer):
     def __init__(self, *args, **kwargs):
         self.opts = self._options_class(self.Meta)
         # compat: Clean up some context from DRF 2.x
-        for item in ('many', 'context', 'partial', 'files', 'allow_add_remove'):
-            kwargs.pop(item, None)
+        # for item in ('many', 'context', 'partial', 'files', 'allow_add_remove'):
+        #     kwargs.pop(item, None)
         super(ModelSerializer, self).__init__(*args, **kwargs)
 
     #
     # Regular serializer functions
     #
 
-    def to_primative(self, instance):
-        """
-        Object instance -> Dict of primitive datatypes.
-        """
-        ret = OrderedDict()
-        fields = [field for field in self.fields.values() if not field.write_only]
+    # def to_primative(self, instance):
+    #     """
+    #     Object instance -> Dict of primitive datatypes.
+    #     """
+    #     ret = OrderedDict()
+    #     fields = [field for field in self.fields.values() if not field.write_only]
 
-        for field in fields:
-            native_value = field.get_attribute(instance)
-            ret[field.field_name] = field.to_primative(native_value)
+    #     for field in fields:
+    #         native_value = field.get_attribute(instance)
+    #         ret[field.field_name] = field.to_primative(native_value)
 
-        return ret
+    #     return ret
 
 
     def create(self, validated_data):
